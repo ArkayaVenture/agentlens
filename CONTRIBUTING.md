@@ -1,4 +1,4 @@
-# Contributing to my-brain
+# Contributing to AgentLens
 
 Thanks for your interest! Contributions are welcome under the project's licence.
 
@@ -16,9 +16,9 @@ Thanks for your interest! Contributions are welcome under the project's licence.
 3. Validate locally:
    ```bash
    claude plugin validate . --strict
-   python3 -m py_compile plugins/my-brain/platform/serve.py
+   python3 -m py_compile plugins/AgentLens/platform/serve.py
    node --check <(python3 - <<'PY'
-import re;print("\n".join(re.findall(r"<script>(.*?)</script>", open("plugins/my-brain/dashboard/index.html").read(), re.S)))
+import re;print("\n".join(re.findall(r"<script>(.*?)</script>", open("plugins/AgentLens/dashboard/index.html").read(), re.S)))
 PY
 )
    ```

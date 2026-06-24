@@ -1,24 +1,38 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "arkaya-plugins",
-  "owner": { "name": "Arkaya Venture Limited", "email": "soumen.trivedi@arkayaventure.co.uk" },
+  "owner": {
+    "name": "Arkaya Venture Limited",
+    "email": "soumen.trivedi@arkayaventure.co.uk"
+  },
   "metadata": {
     "description": "Local-first AI productivity plugins by Arkaya Venture Limited, UK.",
     "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "my-brain",
-      "source": "./plugins/my-brain",
-      "displayName": "my-brain — Second Brain & Live Dashboard",
-      "description": "Always-on local dashboard + self-enriching second brain for Claude Code, Cowork & Cursor. Live sessions, sub-agents, tokens, 4-way data provenance, ULTRACODE strategy view. Fully local: no hooks, no bundled MCP, no telemetry.",
+      "name": "agentlens",
+      "source": "./plugins/agentlens",
+      "displayName": "AgentLens \u2014 Second Brain & Live Dashboard",
+      "description": "Community Edition. Always-on local dashboard for your Claude Code, Cowork & Cursor work: live sessions, sub-agents, tokens, 4-way data provenance and an ULTRACODE strategy view, plus a self-enriching AI feed. Fully local: no hooks, no bundled MCP servers, no telemetry. Advanced token-optimization & the nightly self-improvement engine are available in AgentLens Pro.",
       "version": "1.0.0",
-      "author": { "name": "Arkaya Venture Limited", "url": "https://arkayaventure.com" },
-      "homepage": "https://arkayaventure.github.io/my-brain/",
-      "repository": "https://github.com/arkayaventure/my-brain",
+      "author": {
+        "name": "Arkaya Venture Limited",
+        "url": "https://arkayaventure.com"
+      },
+      "homepage": "https://arkayaventure.github.io/agentlens/",
+      "repository": "https://github.com/arkayaventure/agentlens",
       "license": "CC-BY-NC-4.0",
       "category": "productivity",
-      "keywords": ["dashboard","second-brain","observability","ultracode","provenance","tokens","local-first"],
+      "keywords": [
+        "dashboard",
+        "second-brain",
+        "observability",
+        "ultracode",
+        "provenance",
+        "tokens",
+        "local-first"
+      ],
       "strict": true,
       "defaultEnabled": true
     }

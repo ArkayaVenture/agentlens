@@ -1,0 +1,95 @@
+{
+  "updated": "2026-06-24T00:12:56Z",
+  "items": [
+    {
+      "date": "2026-06-23",
+      "provider": "Anthropic",
+      "category": "feature",
+      "impact": "high",
+      "title": "Claude Tag launches in Slack",
+      "summary": "Anthropic introduced Claude Tag: Claude joins Slack channels as a taggable (@Claude) multiplayer teammate that builds memory over time, takes proactive ambient initiative, and works asynchronously. In beta for Claude Enterprise and Team, runs on Opus 4.8, and replaces the existing Claude in Slack app.",
+      "url": "https://www.anthropic.com/news/introducing-claude-tag"
+    },
+    {
+      "date": "2026-06-23",
+      "provider": "Mistral",
+      "category": "model",
+      "impact": "high",
+      "title": "Mistral OCR 4 released",
+      "summary": "Mistral released OCR 4 (mistral-ocr-4-0; mistral-ocr-latest now points to it), a SOTA document-understanding model adding paragraph-level bounding boxes, typed-block classification and inline confidence scores, with 170-language support and single-container self-hosting. Available via API at $4/1000 pages ($2 with Batch) through Mistral Studio, Amazon SageMaker and Microsoft Foundry.",
+      "url": "https://mistral.ai/news/ocr-4/"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "Anthropic",
+      "category": "tooling",
+      "impact": "medium",
+      "title": "Claude Code 2.1.186",
+      "summary": "Claude Code 2.1.186 adds `claude mcp login`/`logout` CLI commands to authenticate MCP servers without the interactive menu (with --no-browser SSH support), status filtering in the /workflows agent detail view, and a Skills section in the /plugin Installed tab. `!` bash commands now auto-trigger Claude to respond to their output, plus background-agent and subagent fixes.",
+      "url": "https://code.claude.com/docs/en/changelog"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "OpenAI",
+      "category": "model",
+      "impact": "high",
+      "title": "GPT-5.5-Cyber released to defenders (Daybreak)",
+      "summary": "OpenAI expanded its Daybreak program with an updated Codex Security plugin and the full release of GPT-5.5-Cyber to trusted defenders, setting a new SOTA 85.6% on CyberGym (vs 81.8% for GPT-5.5), aimed at moving past vulnerability discovery toward end-to-end patch automation.",
+      "url": "https://openai.com/index/daybreak-securing-the-world/"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "OpenAI",
+      "category": "safety",
+      "impact": "medium",
+      "title": "OpenAI 'Patch the Planet' initiative",
+      "summary": "OpenAI launched Patch the Planet, a Daybreak initiative with Trail of Bits and HackerOne funding researchers to use Codex Security to help open-source maintainers turn findings into merged fixes. More than 30 projects committed, including cURL, Go, Python, Sigstore and pyca/cryptography.",
+      "url": "https://openai.com/index/patch-the-planet/"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "NVIDIA",
+      "category": "safety",
+      "impact": "high",
+      "title": "NVIDIA Halos for Robotics",
+      "summary": "NVIDIA announced Halos for Robotics, billed as the industry's first full-stack safety system for robotics and physical AI (IGX Thor compute, Halos OS, an ANAB-accredited AI Systems Inspection Lab). The open-source Halos Outside-In Safety Blueprint is in early access on GitHub; Agility is the first robotics partner.",
+      "url": "https://nvidianews.nvidia.com/news/nvidia-announces-halos-for-robotics-the-industrys-first-full-stack-safety-system-for-physical-ai"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "NVIDIA",
+      "category": "feature",
+      "impact": "high",
+      "title": "NVIDIA Vera Rubin for science",
+      "summary": "NVIDIA announced the Vera Rubin platform for scientific supercomputing (~7 exaflops AI, 5 petaflops native FP64 per rack, up to 144 GPUs). Vera Rubin NVL4 systems from Bull, Dell, GIGABYTE, HPE and Supermicro are expected Q4 2026, with LRZ, NERSC and Los Alamos as early adopters.",
+      "url": "https://nvidianews.nvidia.com/news/nvidia-vera-rubin-delivers-world-class-supercomputers-for-science"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "NVIDIA",
+      "category": "tooling",
+      "impact": "medium",
+      "title": "CUDA-X AI-for-science software (DAQIRI, ALCHEMI)",
+      "summary": "At ISC High Performance 2026, NVIDIA introduced new CUDA-X AI-for-science software: the DAQIRI high-performance data-acquisition networking library (now on GitHub) and new ALCHEMI NIM microservices/toolkit for chemistry and materials discovery, with cuPhoton reference code coming this summer.",
+      "url": "https://blogs.nvidia.com/blog/ai-for-science-software-cuda/"
+    },
+    {
+      "date": "2026-06-22",
+      "provider": "Cursor",
+      "category": "feature",
+      "impact": "high",
+      "title": "Cursor 3.8 'Customize Cursor'",
+      "summary": "Cursor 3.8 ships a unified Customize page to add and manage plugins, skills, MCPs, subagents, rules, commands and hooks at the user, team or workspace level, including bring-your-own custom MCPs. Adds a team Marketplace leaderboard, prebuilt plugin canvases (Hex, Atlassian), and Team Marketplace imports from GitLab, Bitbucket and Azure DevOps.",
+      "url": "https://cursor.com/changelog/customize"
+    },
+    {
+      "date": "2026-06-23",
+      "provider": "system",
+      "category": "tooling",
+      "impact": "low",
+      "title": "Second brain initialized",
+      "summary": "agentlens created by Cowork. Daily and weekly research loops are scheduled and will populate this feed automatically.",
+      "url": ""
+    }
+  ]
+}

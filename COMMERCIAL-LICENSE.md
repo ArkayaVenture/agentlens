@@ -1,6 +1,6 @@
 # Commercial Licence
 
-**my-brain — Second Brain & Live Dashboard**
+**AgentLens — Second Brain & Live Dashboard**
 © 2026 **Arkaya Venture Limited**, United Kingdom. All rights reserved.
 
 The public/open licence for this project is **Creative Commons
@@ -15,10 +15,10 @@ use is *primarily intended for or directed toward commercial advantage or
 monetary compensation*. This includes, without limitation:
 
 - Use inside a **for-profit company** as part of its operations or tooling.
-- Bundling or shipping my-brain (in whole or part) in a **paid product** or a
+- Bundling or shipping AgentLens (in whole or part) in a **paid product** or a
   product that drives revenue.
-- Offering my-brain as a **hosted or managed service (SaaS)**.
-- Using my-brain to produce **paid consulting or client deliverables**.
+- Offering AgentLens as a **hosted or managed service (SaaS)**.
+- Using AgentLens to produce **paid consulting or client deliverables**.
 - Removing or obscuring the required attribution.
 
 Non-commercial uses — personal projects, academic research, evaluation, and

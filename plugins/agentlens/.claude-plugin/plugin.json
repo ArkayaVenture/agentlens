@@ -1,0 +1,26 @@
+{
+  "name": "agentlens",
+  "displayName": "AgentLens \u2014 Second Brain & Live Dashboard",
+  "version": "1.0.0",
+  "description": "Community Edition. Always-on local dashboard for your Claude Code, Cowork & Cursor work: live sessions, sub-agents, tokens, 4-way data provenance and an ULTRACODE strategy view, plus a self-enriching AI feed. Fully local: no hooks, no bundled MCP servers, no telemetry. Advanced token-optimization & the nightly self-improvement engine are available in AgentLens Pro.",
+  "author": {
+    "name": "Arkaya Venture Limited",
+    "email": "soumen.trivedi@arkayaventure.co.uk",
+    "url": "https://arkayaventure.com"
+  },
+  "homepage": "https://arkayaventure.github.io/agentlens/",
+  "repository": "https://github.com/arkayaventure/agentlens",
+  "license": "CC-BY-NC-4.0",
+  "keywords": [
+    "dashboard",
+    "second-brain",
+    "observability",
+    "ultracode",
+    "claude-code",
+    "cowork",
+    "cursor",
+    "provenance",
+    "tokens",
+    "local-first"
+  ]
+}

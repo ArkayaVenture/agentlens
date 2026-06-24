@@ -1,19 +1,19 @@
 # Security Policy
 
-**my-brain** is designed to be a *low-trust-surface, local-first* plugin. This
+**AgentLens** is designed to be a *low-trust-surface, local-first* plugin. This
 document states exactly what it does and does not do, the threat model, and how
 to report a vulnerability.
 
 > Anthropic's own guidance: plugins "can execute arbitrary code on your machine
 > with your user privileges. Only install plugins and add marketplaces from
-> sources you trust." my-brain is built to earn that trust by minimising what it
+> sources you trust." AgentLens is built to earn that trust by minimising what it
 > runs and keeping everything readable and local.
 
 ## What this plugin contains (declare-everything)
 
 | Component | Present? | Notes |
 |-----------|----------|-------|
-| Skills | ✅ 2 | `setup-my-brain` (installer), `dashboard-optimizer` (opt-in nightly). Inert until you invoke them. |
+| Skills | ✅ 2 | `setup-agentlens` (installer), `dashboard-optimizer` (opt-in nightly). Inert until you invoke them. |
 | Hooks | ❌ none | No lifecycle hooks. Nothing runs automatically on Claude Code events. |
 | Bundled MCP servers | ❌ none | No `.mcp.json`. The plugin adds no network connectors. |
 | Agents shipped by plugin | ❌ none | No bundled sub-agent definitions. |
@@ -22,14 +22,14 @@ to report a vulnerability.
 
 Everything is plain text and auditable. There is no obfuscated or minified code.
 
-## What it does at runtime (after you run `setup-my-brain`)
+## What it does at runtime (after you run `setup-agentlens`)
 
 - Installs a **macOS LaunchAgent** that runs `platform/serve.py` at login.
 - `serve.py` binds **`127.0.0.1` only** (loopback) — never `0.0.0.0`. The
   dashboard is not reachable from your network.
 - The server **reads** your local session transcripts (`~/.claude/projects`,
   Cowork sessions, Cursor state) with **your own user permissions**, and
-  **writes** only inside the brain folder (`~/claude-projects/my-brain`).
+  **writes** only inside the brain folder (`~/claude-projects/agentlens`).
 - It has **no authentication** because it has **no remote surface** — it is a
   read-mostly localhost viewer of files you already own.
 
@@ -57,7 +57,7 @@ Everything is plain text and auditable. There is no obfuscated or minified code.
 
 - Review `platform/serve.py` and `dashboard/index.html` before installing — they
   are short and dependency-free.
-- Keep the brain folder under a path you control (default `~/claude-projects/my-brain`).
+- Keep the brain folder under a path you control (default `~/claude-projects/agentlens`).
 - Treat the 3 scheduled jobs as opt-in; click **Run now** once to see exactly
   what they do before trusting them on a schedule.
 
@@ -65,7 +65,7 @@ Everything is plain text and auditable. There is no obfuscated or minified code.
 
 Please report security issues **privately** — do not open a public issue.
 
-- Email: **soumen.trivedi@arkayaventure.co.uk** (subject: `my-brain security`)
+- Email: **soumen.trivedi@arkayaventure.co.uk** (subject: `AgentLens security`)
 - Include: affected version/commit, reproduction steps, and impact.
 - We aim to acknowledge within **2 business days** and to provide a fix or
   mitigation timeline within **7 days** for confirmed issues.
