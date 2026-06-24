@@ -58,18 +58,45 @@ except Exception:
     PRO = False
 
 
-# Provenance config: which MCP servers are FIRM/internal vs external web/LLM.
-_DEFAULT_FIRM = "atlassian,atlassian-mcp-server,jira,confluence,skill-marketplace,marvin-cocierge-services,avm-dev,pm-agents-npn,office-memory,marvin"
-FIRM_MCP = set(x.strip().lower() for x in os.environ.get("AGENTLENS_FIRM_MCP", _DEFAULT_FIRM).split(",") if x.strip())
-WEB_MCP = {"tavily", "context7", "fetch", "brave", "exa", "firecrawl"}
-LLM_MCP = {"openai", "gemini", "bedrock", "perplexity", "groq", "mistral", "llm"}
-PROV_CATS = ("internal", "firm", "web", "llm")
+# Data-provenance taxonomy (generic + configurable; no hardcoded org/personal names).
+#   local = this machine (files, local bash, local search)
+#   mcp   = MCP connectors (sub-typed local vs external; default "unknown")
+#   web   = public web (search / fetch / browser)
+#   llm   = external LLM calls (vendor-identified)
+PROV_CATS = ("local", "mcp", "web", "llm")
+def _envset(name):
+    return set(x.strip().lower() for x in os.environ.get(name, "").split(",") if x.strip())
+# Configure which MCP servers count as local vs external (substring match). Default: unknown.
+MCP_LOCAL = _envset("AGENTLENS_MCP_LOCAL")
+MCP_EXTERNAL = _envset("AGENTLENS_MCP_EXTERNAL")
+# Generic public web/data MCP vendors → treated as external MCP unless overridden.
+WEB_MCP = _envset("AGENTLENS_WEB_MCP") or {"tavily", "context7", "fetch", "brave", "exa", "firecrawl", "serper"}
+# Public LLM vendors (name substring -> display label). Identifies external-LLM contributors.
+LLM_VENDORS = {"openai": "OpenAI", "gpt": "OpenAI", "anthropic": "Anthropic", "claude": "Anthropic (Claude)",
+               "gemini": "Google (Gemini)", "vertex": "Google", "palm": "Google", "qwen": "Qwen (Alibaba)",
+               "mistral": "Mistral", "mixtral": "Mistral", "llama": "Llama (Meta)", "bedrock": "AWS Bedrock",
+               "perplexity": "Perplexity", "groq": "Groq", "cohere": "Cohere", "deepseek": "DeepSeek",
+               "grok": "xAI (Grok)", "xai": "xAI", "ollama": "Ollama (local)", "lmstudio": "LM Studio (local)",
+               "llamacpp": "llama.cpp (local)"}
+def llm_vendor(s):
+    s = (s or "").lower()
+    for k, v in LLM_VENDORS.items():
+        if k in s:
+            return v
+    return None
+def mcp_subtype(server):
+    s = (server or "").lower()
+    if any(x in s for x in MCP_LOCAL):
+        return "local"
+    if any(x in s for x in MCP_EXTERNAL) or s in WEB_MCP or any(x in s for x in WEB_MCP):
+        return "external"
+    return "unknown"
 
 # ---------------- helpers ----------------
 
 def pretty_project(dirname):
     s = dirname.lstrip("-")
-    for marker in ("IdeaProjects-external-", "IdeaProjects-", "Downloads-", "Documents-", "Trivedi-"):
+    for marker in ("Projects-", "Downloads-", "Documents-", "Desktop-", "src-", "code-"):
         if marker in s:
             return s.split(marker)[-1]
     return s
@@ -128,36 +155,35 @@ def mcp_server(name):
     return None
 
 def classify_tool(name, summary=""):
-    """4-way data-provenance category:
-       internal = local machine (files, local bash, local search)
-       firm     = MCP calls to internal/firm connectors (Jira, marketplaces, internal services)
-       web      = public web (WebSearch/WebFetch, browser, network bash, web MCPs)
-       llm      = calls to other/external LLMs
-    """
+    """Generic data-provenance category: local | mcp | web | llm."""
     n = name or ""
     low = n.lower()
     srv = mcp_server(n)
     if srv:
-        s = srv.lower()
-        if s in FIRM_MCP or any(f in s for f in ("marvin", "mck", "firm", "internal", "jira", "confluence")):
-            return "firm"
-        if s in LLM_MCP:
-            return "llm"
-        if s in WEB_MCP:
-            return "web"
-        return "firm"  # unknown MCP defaults to firm/internal connector (override via AGENTLENS_FIRM_MCP)
-    if n in WEB_TOOLS or low.startswith("web") or "chrome" in low or "browser" in low or "playwright" in low or "tavily" in low:
+        return "llm" if llm_vendor(srv) else "mcp"
+    if n in WEB_TOOLS or low.startswith("web") or "chrome" in low or "browser" in low or "playwright" in low:
         return "web"
-    if any(k in low for k in ("openai", "gemini", "bedrock", "perplexity", "groq")):
+    if llm_vendor(low):
         return "llm"
     if n == "Bash":
         s = (summary or "").lower()
-        return "web" if any(k in s for k in _NET_BASH) else "internal"
-    return "internal"
+        return "web" if any(k in s for k in _NET_BASH) else "local"
+    return "local"
+
+def contributor_of(name, summary=""):
+    """Return (category, contributor_label, subtype) for drill-down."""
+    cat = classify_tool(name, summary)
+    srv = mcp_server(name)
+    if cat == "llm":
+        return cat, (llm_vendor((srv or name)) or (srv or name)), "external"
+    if cat == "mcp":
+        sv = srv or name
+        return cat, sv, mcp_subtype(sv)
+    return cat, (name or "tool"), ("local" if cat == "local" else "external")
 
 def _prov_rollup(prov):
     tot = sum(prov.values())
-    ext = prov.get("firm", 0) + prov.get("web", 0) + prov.get("llm", 0)
+    ext = prov.get("mcp", 0) + prov.get("web", 0) + prov.get("llm", 0)
     return tot, ext
 
 def usage_of(o):
@@ -243,7 +269,7 @@ def light_parse(path):
     msgs = assistant = tools = thinking = 0
     by_tool = {}
     subagent_spawns = 0
-    prov = {"internal": 0, "firm": 0, "web": 0, "llm": 0}
+    prov = {"local": 0, "mcp": 0, "web": 0, "llm": 0}
     skills = set(); mcps = set()
     models = set()
     first_ts = last_ts = None
@@ -290,7 +316,7 @@ def light_parse(path):
         "durationSec": _duration(first_ts, last_ts), "lastText": _short(last_text, 200),
         "tokensIn": tin, "tokensOut": tout, "cacheRead": cread, "cacheCreate": ccreate,
         "tokensInTotal": tin + cread + ccreate, "tokensTotal": tin + cread + ccreate + tout,
-        "internalCalls": prov["internal"], "externalCalls": ext, "prov": prov,
+        "internalCalls": prov["local"], "externalCalls": ext, "prov": prov,
         "extPct": round(ext / tot, 3) if tot else 0,
         "skills": sorted(skills), "mcpServers": sorted(mcps),
     }
@@ -335,7 +361,7 @@ def session_detail(session_file):
     timeline = []; by_tool = {}; spawns = []; pending = {}
     first_ts = last_ts = None; sid = cwd = None; models = set()
     tin = tout = cread = ccreate = 0; tturns = []
-    prov = {"internal": 0, "firm": 0, "web": 0, "llm": 0}; skills = set(); mcps = set(); tool_origin = {}; tool_tokens = {}
+    prov = {"local": 0, "mcp": 0, "web": 0, "llm": 0}; skills = set(); mcps = set(); tool_origin = {}; tool_tokens = {}
     i = 0
     for o in _iter_lines(fp):
         t = o.get("type"); ts = _ts(o)
@@ -421,7 +447,7 @@ def session_detail(session_file):
             "inTotal": tin + cread + ccreate, "tokensTotal": tin + cread + ccreate + tout,
             "cacheHit": round(cread / (tin + cread + ccreate), 3) if (tin + cread + ccreate) else 0,
             "tokenTurns": tturns,
-            "internalCalls": prov["internal"], "externalCalls": ext, "prov": prov,
+            "internalCalls": prov["local"], "externalCalls": ext, "prov": prov,
             "extPct": round(ext / tot, 3) if tot else 0,
             "skills": sorted(skills), "mcpServers": sorted(mcps)}
     flow = build_flow(meta, by_tool, spawns, sub_rows)
@@ -476,11 +502,146 @@ def token_suggestions(tin, tout, cread, ccreate, rows):
         out.append({"level": "info", "text": "Token usage looks healthy."})
     return out[:6]
 
+def provenance_contributors(by_tool):
+    """Group tool usage into provenance contributors for drill-down.
+    by_tool: dict name->count (or list of {name,count}). Returns {cat: [{name,count,subtype}]}."""
+    if isinstance(by_tool, dict):
+        items = by_tool.items()
+    else:
+        items = [(t.get("name"), t.get("count", 0)) for t in (by_tool or [])]
+    buckets = {c: {} for c in PROV_CATS}
+    subtypes = {}
+    for name, cnt in items:
+        cat, label, sub = contributor_of(name)
+        d = buckets[cat]
+        d[label] = d.get(label, 0) + (cnt or 0)
+        subtypes[(cat, label)] = sub
+    out = {}
+    for cat, d in buckets.items():
+        out[cat] = sorted(
+            [{"name": k, "count": v, "subtype": subtypes.get((cat, k), "")} for k, v in d.items()],
+            key=lambda x: -x["count"])
+    return out
+
+# ---- user config (persisted locally; powers widget layouts + settings) ----
+def _config_path():
+    return os.environ.get("AGENTLENS_CONFIG", os.path.join(DASHBOARD_DIR, "config.json"))
+
+def load_config():
+    try:
+        with open(_config_path(), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_config(cfg):
+    try:
+        with open(_config_path(), "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+def _list_skill_names(d):
+    out = []
+    if os.path.isdir(d):
+        for n in sorted(os.listdir(d)):
+            fp = os.path.join(d, n)
+            if os.path.isdir(fp) and os.path.isfile(os.path.join(fp, "SKILL.md")):
+                out.append(n)
+            elif n.endswith(".md"):
+                out.append(n[:-3])
+    return out
+
+def topology():
+    """Reflect the user's OWN environment (configurable). Nothing hardcoded."""
+    cfg = load_config().get("topology", {})
+    home = os.path.expanduser("~/.claude")
+    skills = _list_skill_names(os.path.join(home, "skills"))
+    agents = _list_skill_names(os.path.join(home, "agents"))
+    commands = _list_skill_names(os.path.join(home, "commands"))
+    rows = sessions_enriched()
+    mcps = sorted({m for r in rows for m in (r.get("mcpServers") or [])})
+    sub_agents = sorted({s for r in rows for s in (r.get("skills") or [])})
+    projects = sorted({r["project"] for r in rows})
+    sources = sorted({r.get("source", "?") for r in rows})
+    return {
+        "skills": cfg.get("skills") or skills,
+        "agents": cfg.get("agents") or agents,
+        "commands": cfg.get("commands") or commands,
+        "mcp": [{"name": m, "subtype": mcp_subtype(m), "category": classify_tool("mcp__" + m + "__t")} for m in mcps],
+        "projects": projects,
+        "platforms": sources,
+        "skillsUsed": sub_agents,
+        "source": "live (from ~/.claude + your sessions)",
+    }
+
+# ---- datasets API (explorer + query browser) ----
+def _ds_sessions():
+    cols = ["project", "source", "sessionId", "lastTs", "messages", "toolCalls", "subagentFiles",
+            "tokensInTotal", "tokensOut", "tokensTotal", "extPct", "durationSec", "live"]
+    rows = []
+    for r in sessions_enriched():
+        rows.append({k: r.get(k) for k in cols} | {"file": r.get("file")})
+    return {"columns": cols, "rows": rows}
+
+def _ds_tools():
+    agg = {}
+    for r in sessions_enriched():
+        for k, v in (r.get("byTool") or {}).items():
+            cat, label, sub = contributor_of(k)
+            a = agg.setdefault(k, {"tool": k, "count": 0, "category": cat, "contributor": label, "subtype": sub})
+            a["count"] += v
+    return {"columns": ["tool", "count", "category", "contributor", "subtype"],
+            "rows": sorted(agg.values(), key=lambda x: -x["count"])}
+
+def _ds_tokens_by_day():
+    o = overview()
+    return {"columns": ["date", "in", "out", "cache"], "rows": o.get("tokensByDay", [])}
+
+def _ds_provenance():
+    o = overview()
+    rows = []
+    for cat, lst in (o.get("provContributors") or {}).items():
+        for c in lst:
+            rows.append({"category": cat, "contributor": c["name"], "subtype": c.get("subtype", ""), "count": c["count"]})
+    return {"columns": ["category", "contributor", "subtype", "count"],
+            "rows": sorted(rows, key=lambda x: -x["count"])}
+
+def _ds_cursor():
+    try:
+        import sys as _sys
+        if ROOT not in _sys.path:
+            _sys.path.insert(0, ROOT)
+        import cursor_parser
+        data = cursor_parser.summarize()
+        rows = data.get("conversations", []) if isinstance(data, dict) else []
+        return {"columns": ["title", "workspace", "model", "messageCount", "tools", "files", "lastTs", "agentic"],
+                "rows": rows, "meta": {k: v for k, v in (data or {}).items() if k != "conversations"}}
+    except Exception as e:
+        return {"columns": [], "rows": [], "error": str(e)}
+
+DATASETS = {
+    "sessions": ("Sessions", _ds_sessions),
+    "tools": ("Tool usage", _ds_tools),
+    "tokensByDay": ("Tokens by day", _ds_tokens_by_day),
+    "provenance": ("Provenance contributors", _ds_provenance),
+    "cursor": ("Cursor conversations", _ds_cursor),
+}
+
+def datasets_index():
+    return {"datasets": [{"name": k, "label": v[0]} for k, v in DATASETS.items()]}
+
+def dataset(name):
+    if name not in DATASETS:
+        return {"error": "unknown dataset", "available": list(DATASETS)}
+    return DATASETS[name][1]()
+
 def overview():
     rows = sessions_enriched()
     total_tools = 0; by_tool = {}; subs = 0
     tin = tout = cread = ccreate = 0
-    prov4 = {"internal": 0, "firm": 0, "web": 0, "llm": 0}
+    prov4 = {"local": 0, "mcp": 0, "web": 0, "llm": 0}
     by_day = {}; by_source = {}; live = 0
     for r in rows:
         if isinstance(r.get("toolCalls"), int):
@@ -502,7 +663,7 @@ def overview():
             d["in"] += ri + rc + cc; d["out"] += ro; d["cache"] += rc
     projects = sorted({r["project"] for r in rows})
     series = sorted(by_day.values(), key=lambda x: x["date"])[-30:]
-    tot = sum(prov4.values()); ext = prov4["firm"] + prov4["web"] + prov4["llm"]
+    tot = sum(prov4.values()); ext = prov4["mcp"] + prov4["web"] + prov4["llm"]
     top_sessions = sorted([r for r in rows if isinstance(r.get("tokensTotal"), int)],
                           key=lambda r: r.get("tokensTotal", 0), reverse=True)[:10]
     return {
@@ -510,7 +671,7 @@ def overview():
         "subagents": subs, "toolCalls": total_tools, "live": live, "bySource": by_source, "version": VERSION, "pro": PRO,
         "byTool": [{"name": k, "count": v, "origin": classify_tool(k)} for k, v in sorted(by_tool.items(), key=lambda x: -x[1])],
         "recent": rows[:14], "projectsDir": PROJECTS_DIR,
-        "provenance": {"internal": prov4["internal"], "firm": prov4["firm"], "web": prov4["web"], "llm": prov4["llm"],
+        "provenance": {"local": prov4["local"], "mcp": prov4["mcp"], "web": prov4["web"], "llm": prov4["llm"],
                        "external": ext, "extPct": round(ext / tot, 3) if tot else 0},
         "topSessions": [{"project": r.get("project"), "source": r.get("source"), "file": r.get("file"),
                          "sessionId": r.get("sessionId"), "tokensTotal": r.get("tokensTotal"), "tokensOut": r.get("tokensOut"),
@@ -520,6 +681,7 @@ def overview():
                    "inTotal": tin + cread + ccreate, "total": tin + cread + ccreate + tout,
                    "cacheHit": round(cread / (tin + cread + ccreate), 3) if (tin + cread + ccreate) else 0},
         "tokensByDay": series,
+        "provContributors": provenance_contributors(by_tool),
         "suggestions": token_suggestions(tin, tout, cread, ccreate, rows),
         "optimization": (_pro.optimization_report(rows, {"in": tin, "out": tout, "cacheRead": cread, "cacheCreate": ccreate}) if (PRO and hasattr(_pro, "optimization_report")) else None),
     }
@@ -600,6 +762,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_POST(self):
+        try:
+            u = urllib.parse.urlparse(self.path)
+            if u.path == "/api/config":
+                n = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(n) if n else b"{}"
+                try:
+                    cfg = json.loads(body or b"{}")
+                except Exception:
+                    return self._json({"error": "bad json"}, 400)
+                ok = save_config(cfg)
+                return self._json({"ok": ok})
+            return self._json({"error": "unknown endpoint"}, 404)
+        except Exception as e:
+            self._json({"error": str(e)}, 500)
+
     def do_GET(self):
         try:
             u = urllib.parse.urlparse(self.path)
@@ -611,7 +789,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                        "time": datetime.datetime.now().isoformat(timespec="seconds"),
                                        "dashboardDir": DASHBOARD_DIR, "projectsDir": PROJECTS_DIR,
                                        "projectsExist": os.path.isdir(PROJECTS_DIR),
-                                       "features": ["tokens", "provenance4", "multisource", "live", "tokenAttribution"], "pro": PRO,
+                                       "features": ["tokens", "provenance", "multisource", "live", "tokenAttribution", "topology", "datasets", "config"], "pro": PRO,
                                        "sources": [{"label": s["label"], "root": s["root"], "exists": os.path.isdir(s["root"])} for s in SOURCES],
                                        "liveWindowSec": LIVE_WINDOW})
                 if p == "/api/overview":
@@ -625,6 +803,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     return self._json(session_detail(f))
                 if p == "/api/agents":
                     return self._json(all_agents())
+                if p == "/api/topology":
+                    return self._json(topology())
+                if p == "/api/datasets":
+                    return self._json(datasets_index())
+                if p == "/api/dataset":
+                    return self._json(dataset((q.get("name") or [""])[0]))
+                if p == "/api/config":
+                    return self._json(load_config())
                 if p == "/api/graph":
                     return self._json(graph())
                 if p == "/api/debug":
@@ -658,7 +844,7 @@ def main():
         print(f"  dashboard: {DASHBOARD_DIR}")
         for s in SOURCES:
             print(f"  source [{s['label']}]: {s['root']}  (exists={os.path.isdir(s['root'])})")
-        print("  api: /api/health /api/overview /api/sessions /api/session?file= /api/agents /api/graph /api/debug")
+        print("  api: /api/health /api/overview /api/sessions /api/session?file= /api/agents /api/graph /api/topology /api/datasets /api/dataset /api/config")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

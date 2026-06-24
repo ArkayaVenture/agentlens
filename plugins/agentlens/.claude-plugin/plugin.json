@@ -5,7 +5,7 @@
   "description": "Community Edition. Always-on local dashboard for your Claude Code, Cowork & Cursor work: live sessions, sub-agents, tokens, 4-way data provenance and an ULTRACODE strategy view, plus a self-enriching AI feed. Fully local: no hooks, no bundled MCP servers, no telemetry. Advanced token-optimization & the nightly self-improvement engine are available in AgentLens Pro.",
   "author": {
     "name": "Arkaya Venture Limited",
-    "email": "soumen.trivedi@arkayaventure.co.uk",
+    "email": "hello@arkayaventure.com",
     "url": "https://arkayaventure.com"
   },
   "homepage": "https://arkayaventure.github.io/agentlens/",

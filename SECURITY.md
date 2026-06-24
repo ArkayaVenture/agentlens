@@ -65,7 +65,7 @@ Everything is plain text and auditable. There is no obfuscated or minified code.
 
 Please report security issues **privately** — do not open a public issue.
 
-- Email: **soumen.trivedi@arkayaventure.co.uk** (subject: `AgentLens security`)
+- Email: **hello@arkayaventure.com** (subject: `AgentLens security`)
 - Include: affected version/commit, reproduction steps, and impact.
 - We aim to acknowledge within **2 business days** and to provide a fix or
   mitigation timeline within **7 days** for confirmed issues.

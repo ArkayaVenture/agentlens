@@ -1,0 +1,4 @@
+{
+  "topology": { "skills": [], "agents": [], "commands": [] },
+  "dashboards": [ { "id": "default", "name": "My dashboard", "widgets": [] } ]
+}

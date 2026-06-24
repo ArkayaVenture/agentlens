@@ -58,7 +58,7 @@ That seeds a persistent brain at `~/claude-projects/agentlens`, installs the alw
 | **🕸️ Workflow Brain + Topology** | A force-directed graph of your workflows and a capability topology of skills, agents, commands and MCP connectors. |
 | **⚡ ULTRACODE view** | Detects fan-out, tournament, loop-until-done, adversarial and classify-and-act strategies across your real sessions. |
 | **📡 Self-enriching AI Feed** | Scheduled ULTRACODE research loops keep a dated, cited digest of the AI ecosystem and feed the dashboard. |
-| **🌗 Day/night themes** | Clean McKinsey-style navy/blue dark + white light. |
+| **🌗 Day/night themes** | Clean professional navy/blue dark + white light. |
 
 ## 🔐 Security & privacy (read this — it's short)
 
@@ -118,7 +118,7 @@ Run `claude plugin validate . --strict` before rolling out.
 | Priority support & attribution waiver | — | ✅ |
 
 The Pro engine is a drop-in module (`agentlens_pro`) the open server loads automatically when present —
-the Community Edition runs fully standalone without it. **Pro enquiries:** soumen.trivedi@arkayaventure.co.uk.
+the Community Edition runs fully standalone without it. **Pro enquiries:** hello@arkayaventure.com.
 
 ## 📜 Licence
 
@@ -127,7 +127,7 @@ attribution to **Arkaya Venture Limited, UK** is always required (see [NOTICE](.
 
 **Commercial use requires a paid licence.** Using AgentLens inside a for-profit company, in a paid
 product, or as a hosted service? See **[COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md)** or email
-**soumen.trivedi@arkayaventure.co.uk**.
+**hello@arkayaventure.com**.
 
 ## 🚀 About Arkaya Venture
 

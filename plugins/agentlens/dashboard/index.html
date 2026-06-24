@@ -3,716 +3,349 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AgentLens · Command Center</title>
+<title>AgentLens · Monitoring</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
-  :root{
-    /* McKinsey-style: deep navy + blue (dark mode) */
-    --bg:#04141f; --bg2:#081d2e; --panel:#0b2236; --panel2:#081d2f; --line:#183248;
-    --txt:#e9f1f8; --mut:#90a6bc; --accent:#2f6bff; --cyan:#37b0d0; --viol:#8a7dff;
-    --hi:#f0506e; --med:#f5a623; --lo:#19c37d; --ok:#19c37d; --err:#f0506e; --chip:#0f2336;
-    --sh:0 10px 34px rgba(0,12,28,.45); --viz:radial-gradient(720px 380px at 60% 18%,#0a2138,#04141f);
-    --glowbg:radial-gradient(1100px 560px at 85% -8%,#0c2c4a,transparent 60%);
-  }
-  body.light{
-    /* McKinsey-style: clean white + blue (light mode) */
-    --bg:#f3f6fa; --bg2:#ffffff; --panel:#ffffff; --panel2:#f7f9fc; --line:#e4e9f1;
-    --txt:#0b2138; --mut:#5d7184; --accent:#1f40e6; --cyan:#0e7faf; --viol:#6d5ce0;
-    --hi:#d6336c; --med:#c77700; --lo:#0f9d63; --ok:#0f9d63; --err:#d6336c; --chip:#eef2f8;
-    --sh:0 4px 16px rgba(15,35,70,.08);
-    --viz:radial-gradient(720px 380px at 60% 18%,#f3f7fc,#e7edf5);
-    --glowbg:radial-gradient(1100px 560px at 85% -8%,#e6eefc,transparent 60%);
-  }
-  body.light .topbar{background:rgba(255,255,255,.92)}
-  body.light .banner.live{color:#15803d}
-  body.light .banner.down{color:#b45309}
-  .vizstage{background:radial-gradient(720px 380px at 60% 18%,#0a2138,#04141f)}
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
-  body{font:13.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
-       background:var(--glowbg),var(--bg);color:var(--txt)}
-  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-  .banner{padding:9px 16px;font-size:12.5px;display:none;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
-  .banner.live{display:flex;background:rgba(25,195,125,.12);color:#8fe6bf}
-  .banner.down{display:flex;background:rgba(255,176,32,.10);color:#ffd98a}
-  .banner code{background:#0008;padding:2px 7px;border-radius:6px;color:#ffe9b3}
-  .app{display:grid;grid-template-columns:228px 1fr;height:calc(100% - 0px);min-height:100vh}
-  .rail{background:linear-gradient(180deg,var(--bg2),var(--bg));border-right:1px solid var(--line);
-        display:flex;flex-direction:column;padding:14px 12px;gap:4px;position:sticky;top:0;height:100vh}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.3px;padding:6px 8px 14px}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
-  .livering{animation:pulsering 1.6s ease-in-out infinite}
-  @keyframes pulsering{0%,100%{opacity:.18}50%{opacity:.95}}
-  .navbtn{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;cursor:pointer;color:var(--mut);font-weight:600}
-  .navbtn:hover{background:#ffffff08;color:var(--txt)}
-  .navbtn.active{background:linear-gradient(90deg,#5b8cff22,#5b8cff05);color:var(--txt);font-weight:700;box-shadow:inset 2px 0 0 var(--accent)}
-  body.light .navbtn.active{background:linear-gradient(90deg,#2563eb18,#2563eb05)}
-  .navbtn .k{margin-left:auto;font-size:11px;color:var(--cyan);background:var(--chip);border:1px solid var(--line);border-radius:20px;padding:0 7px}
-  .railftr{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:8px;border-top:1px solid var(--line);color:var(--mut);font-size:11.5px}
-  .toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
-  main{padding:18px 22px;overflow:auto;height:100vh}
-  h1{font-size:18px;margin:0 0 2px} .sub{color:var(--mut);margin:0 0 16px;font-size:12.5px}
-  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:16px}
-  .kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;padding:13px;box-shadow:var(--sh)}
-  .kpi .v{font-size:24px;font-weight:800} .kpi .l{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
-  .grid{display:grid;gap:14px}
-  .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1.3fr 1fr}
-  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;padding:15px;box-shadow:var(--sh)}
-  .card h3{margin:0 0 11px;font-size:13.5px;display:flex;gap:8px;align-items:center}
-  .card h3 .tag{margin-left:auto;color:var(--mut);font-size:11px;font-weight:500}
-  .chart-box{position:relative;height:220px}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th,td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;position:sticky;top:0;background:var(--panel)}
-  tbody tr{cursor:pointer} tbody tr:hover{background:#ffffff07}
-  .tbl-wrap{max-height:62vh;overflow:auto;border-radius:10px}
-  .chip{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
-  .c-prov{background:var(--chip);color:var(--cyan)} .c-mod{background:#1c1736;color:var(--viol)}
-  .imp-high{background:rgba(255,93,108,.16);color:var(--hi)}.imp-medium{background:rgba(255,176,32,.16);color:var(--med)}.imp-low{background:rgba(63,185,80,.16);color:var(--lo)}
-  .dot-ok{color:var(--ok)} .dot-err{color:var(--err)} .muted{color:var(--mut)}
-  .controls{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px}
-  select,input[type=search]{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:7px 10px;border-radius:8px;font-size:12.5px}
-  input[type=search]{min-width:230px}
-  .btn{background:var(--chip);border:1px solid var(--line);color:var(--txt);padding:6px 11px;border-radius:8px;cursor:pointer;font-size:12.5px}
-  .btn:hover{border-color:var(--accent)}
-  /* drawer */
-  .drawer-bg{position:fixed;inset:0;background:#000a;display:none;z-index:40}
-  .drawer{position:fixed;top:0;right:0;height:100%;width:min(760px,94vw);background:var(--bg2);border-left:1px solid var(--line);
-          box-shadow:-14px 0 50px #000a;transform:translateX(100%);transition:.25s;z-index:41;display:flex;flex-direction:column}
-  .drawer.open{transform:translateX(0)} .drawer .dh{display:flex;gap:10px;align-items:center;padding:15px 18px;border-bottom:1px solid var(--line)}
-  .drawer .dh .x{margin-left:auto;cursor:pointer;color:var(--mut);font-size:20px}
-  .drawer .db{padding:15px 18px;overflow:auto}
-  /* timeline */
-  .tl{position:relative;margin-top:6px}
-  .ev{display:grid;grid-template-columns:62px 96px 1fr;gap:10px;padding:7px 8px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:var(--panel2)}
-  .ev .t{color:var(--mut);font-size:11px} .ev .lane{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-  .lane-user{color:var(--cyan)}.lane-assistant{color:var(--txt)}.lane-tool{color:var(--accent)}.lane-system{color:var(--viol)}
-  .ev .s{overflow:hidden;text-overflow:ellipsis} .ev.side{border-left:3px solid var(--viol)}
-  .badge{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--chip);margin-left:6px}
-  .b-ok{background:rgba(63,185,80,.18);color:var(--lo)}.b-err{background:rgba(255,93,108,.18);color:var(--hi)}.b-pending{background:#33405a;color:#a9b8cf}
-  /* flow svg */
-  .flow{width:100%;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#0a1120;padding:10px}
-  .node rect{rx:9} text{font:11px sans-serif;fill:#dbe6f5}
-  .row{display:flex;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:var(--panel2);cursor:pointer}
-  .row:hover{border-color:var(--accent)} .row .rn{font-weight:600} .row .rd{color:var(--mut);font-size:12px}
-  .pill{font-size:10.5px;padding:1px 8px;border-radius:20px;background:var(--chip);color:var(--cyan);margin-left:6px}
-  .feed{display:flex;flex-direction:column;gap:9px;max-height:64vh;overflow:auto}
-  .item{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--panel2)} .item:hover{border-color:var(--accent)}
-  .item .h{display:flex;gap:8px;align-items:center;margin-bottom:3px}.item .h .t{font-weight:650}.item .h .src{margin-left:auto;font-size:11px;color:var(--mut)}
-  .strat{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}
-  .strat .c{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px}
-  .strat .c b{display:block;margin-bottom:5px;color:var(--txt)}
-  @media(max-width:1000px){.app{grid-template-columns:1fr}.rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap}.railftr{display:none}.kpis{grid-template-columns:repeat(3,1fr)}.g2,.g3{grid-template-columns:1fr}}
+:root{
+  --bg:#080c15;--bg2:#0b1120;--panel:#101728;--panel2:#0d1422;--line:#1d2942;--line2:#27375a;
+  --txt:#e8eef8;--mut:#8a9ab2;--dim:#5e6f8a;--accent:#4d7cfe;--cyan:#2fd0e0;--green:#2ed47a;
+  --amber:#f5a623;--red:#f0506e;--viol:#9a7dff;--chip:#13203a;
+  --c-local:#4d7cfe;--c-mcp:#9a7dff;--c-web:#f5a623;--c-llm:#f0506e;
+  --sh:0 8px 30px rgba(0,8,24,.5);
+}
+body.light{--bg:#eef2f8;--bg2:#fff;--panel:#fff;--panel2:#f6f8fc;--line:#e2e8f2;--line2:#d4deec;
+  --txt:#10203a;--mut:#5b6b82;--dim:#8493a8;--chip:#eef2f8;--sh:0 4px 16px rgba(20,40,80,.08);}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font:13.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+a{color:var(--cyan);text-decoration:none}
+.app{display:grid;grid-template-columns:218px 1fr;min-height:100vh}
+.rail{background:linear-gradient(180deg,var(--bg2),var(--bg));border-right:1px solid var(--line);padding:14px 11px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:3px;overflow:auto}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.3px;padding:6px 8px 12px;font-size:15px}
+.logo{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#4d7cfe,#2fd0e0);display:inline-block;position:relative}
+.logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--bg2)}
+.navsec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:12px 8px 4px}
+.nav{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--mut);font-weight:600;font-size:13px}
+.nav:hover{background:#ffffff08;color:var(--txt)}
+.nav.on{background:linear-gradient(90deg,#4d7cfe22,#4d7cfe05);color:var(--txt);box-shadow:inset 2px 0 0 var(--accent)}
+.nav .ico{width:16px;text-align:center;opacity:.9}
+.railftr{margin-top:auto;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:7px;color:var(--mut);font-size:11.5px}
+main{padding:18px 22px;overflow:auto;height:100vh}
+.head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+h1{font-size:19px;margin:0}.sub{color:var(--mut);font-size:12.5px;margin:2px 0 0}
+.spacer{flex:1}
+.btn{background:var(--chip);border:1px solid var(--line2);color:var(--txt);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600}
+.btn:hover{border-color:var(--accent)}.btn.pri{background:linear-gradient(90deg,#4d7cfe,#2fd0e0);border:0;color:#fff}
+.banner{padding:9px 14px;border-radius:9px;font-size:12.5px;margin-bottom:14px;display:none;align-items:center;gap:9px}
+.banner.live{display:flex;background:rgba(46,212,122,.1);color:var(--green);border:1px solid #2ed47a33}
+.banner.down{display:flex;background:rgba(245,166,35,.1);color:var(--amber);border:1px solid #f5a62333}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:14px}
+.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--sh)}
+.kpi .v{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.kpi .d{font-size:11px;margin-top:4px;color:var(--dim)}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1.4fr 1fr}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;padding:15px;box-shadow:var(--sh)}
+.card h3{margin:0 0 12px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.card h3 .tag{margin-left:auto;color:var(--dim);font-size:11px;font-weight:500}
+.chartbox{position:relative;height:240px}.chartbox.sm{height:170px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;position:sticky;top:0;background:var(--panel);user-select:none}
+tbody tr:hover{background:#ffffff06}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl-wrap{max-height:64vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.chip{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+.chip.local{background:#4d7cfe22;color:var(--c-local)}.chip.mcp{background:#9a7dff22;color:var(--c-mcp)}
+.chip.web{background:#f5a62322;color:var(--c-web)}.chip.llm{background:#f0506e22;color:var(--c-llm)}
+.chip.ext{background:#f0506e1c;color:#ff8aa0}.chip.loc{background:#2ed47a1c;color:var(--green)}.chip.unk{background:#5e6f8a22;color:var(--mut)}
+.chip.src{background:#2fd0e022;color:var(--cyan)}.chip.live{background:#2ed47a22;color:var(--green)}
+sel,select,input{background:var(--panel);border:1px solid var(--line2);color:var(--txt);padding:7px 10px;border-radius:8px;font-size:12.5px;font-family:inherit}
+input[type=search],input[type=text]{min-width:200px}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--mut)}.dim{color:var(--dim)}
+.provbar{display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--line2)}
+.provleg{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:12px}
+.provleg b{cursor:pointer}.dotc{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle}
+.list .it{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;background:var(--panel2)}
+.list .it .nm{font-weight:600}.list .it .rt{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--mut)}
+.wgrid{display:grid;grid-template-columns:repeat(12,1fr);gap:13px;grid-auto-rows:minmax(40px,auto)}
+.widget{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:13px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.widget.w4{grid-column:span 4}.widget.w6{grid-column:span 6}.widget.w8{grid-column:span 8}.widget.w12{grid-column:span 12}
+.widget .wh{display:flex;align-items:center;gap:7px;margin-bottom:9px;font-size:12.5px;font-weight:600}
+.widget .wx{margin-left:auto;display:flex;gap:5px}
+.icobtn{cursor:pointer;color:var(--dim);font-size:13px;border:1px solid var(--line2);border-radius:6px;padding:1px 6px;background:var(--chip)}
+.icobtn:hover{color:var(--txt);border-color:var(--accent)}
+.drawer-bg{position:fixed;inset:0;background:#000b;display:none;z-index:40}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(720px,95vw);background:var(--bg2);border-left:1px solid var(--line2);transform:translateX(100%);transition:.25s;z-index:41;display:flex;flex-direction:column}
+.drawer.open{transform:none}.drawer .dh{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.drawer .dh .x{margin-left:auto;cursor:pointer;color:var(--mut);font-size:20px}.drawer .db{padding:16px 18px;overflow:auto}
+.qb{display:grid;grid-template-columns:300px 1fr;gap:14px}
+.filterrow{display:grid;grid-template-columns:1fr 90px 1fr 28px;gap:6px;margin-bottom:6px}
+.empty{padding:30px;text-align:center;color:var(--dim);border:1px dashed var(--line2);border-radius:11px}
+.hm{display:grid;gap:2px}.hm .cell{height:18px;border-radius:3px}
+.feed .item{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--panel2);margin-bottom:9px}
+@media(max-width:980px){.app{grid-template-columns:1fr}.rail{position:static;height:auto}.g2,.g3,.qb{grid-template-columns:1fr}.widget[class*=w]{grid-column:span 12}}
 </style>
 </head>
 <body>
-<div id="banner" class="banner"></div>
 <div class="app">
   <nav class="rail">
-    <div class="brand"><span class="dot"></span> AgentLens</div>
-    <div class="navbtn active" data-v="overview">📊 Overview</div>
-    <div class="navbtn" data-v="sessions">🗂️ Sessions <span class="k" id="k-sessions">0</span></div>
-    <div class="navbtn" data-v="agents">🤖 Agents <span class="k" id="k-agents2">0</span></div>
-    <div class="navbtn" data-v="graph">🕸️ Graph</div>
-    <div class="navbtn" data-v="feed">📡 AI Feed</div>
-    <div class="navbtn" data-v="topology">🧩 Topology</div>
-    <div class="navbtn" data-v="ultracode">⚡ ULTRACODE</div>
+    <div class="brand"><span class="logo"></span> AgentLens</div>
+    <div class="navsec">Monitor</div>
+    <div class="nav on" data-v="overview"><span class="ico">▦</span> Overview</div>
+    <div class="nav" data-v="claude"><span class="ico">✦</span> Claude</div>
+    <div class="nav" data-v="cursor"><span class="ico">▶</span> Cursor</div>
+    <div class="nav" data-v="platforms"><span class="ico">⧉</span> Platforms</div>
+    <div class="navsec">Analyze</div>
+    <div class="nav" data-v="provenance"><span class="ico">◈</span> Provenance</div>
+    <div class="nav" data-v="topology"><span class="ico">⬡</span> Topology</div>
+    <div class="nav" data-v="ultracode"><span class="ico">⚡</span> ULTRACODE</div>
+    <div class="navsec">Build</div>
+    <div class="nav" data-v="explore"><span class="ico">▤</span> Explore data</div>
+    <div class="nav" data-v="query"><span class="ico">⌕</span> Query builder</div>
+    <div class="nav" data-v="dashboards"><span class="ico">◳</span> Dashboards</div>
+    <div class="nav" data-v="feed"><span class="ico">📡</span> AI Feed</div>
     <div class="railftr">
-      <label class="toggle"><input type="checkbox" id="auto" checked/> auto-refresh</label>
-      <select id="ivl">
-        <option value="10">every 10s</option><option value="30" selected>every 30s</option>
-        <option value="60">every 60s</option><option value="0">off</option>
-      </select>
-      <button class="btn" onclick="refreshAll(true)">↻ Refresh now</button>
-      <button class="btn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
-      <div id="clock"></div>
+      <label class="row" style="gap:7px"><input type="checkbox" id="auto" checked style="min-width:0"> auto-refresh</label>
+      <button class="btn" onclick="toggleTheme()">◐ Theme</button>
+      <span id="clock" class="dim"></span>
     </div>
   </nav>
   <main id="main"></main>
 </div>
 <div class="drawer-bg" id="dbg" onclick="closeDrawer()"></div>
-<div class="drawer" id="drawer"><div class="dh"><span id="d-title" style="font-weight:700"></span><span class="x" onclick="closeDrawer()">✕</span></div><div class="db" id="d-body"></div></div>
-
+<div class="drawer" id="drawer"><div class="dh"><b id="dtitle"></b><span class="x" onclick="closeDrawer()">✕</span></div><div class="db" id="dbody"></div></div>
 <script>
-/* ---------------- embedded snapshot (offline fallback + Topology/Doctrine) ---------------- */
-const DATA={
- skills:[["threatlens-orchestrator","Threat-modeling pipeline orchestrator","Cursor"],["scout-product-context","Gather product context","Cursor"],["synthesize-system-schema","Build system schema","Cursor"],["actor-profiling","Profile threat actors","Cursor"],["stride-analysis","STRIDE enumeration","Cursor"],["dread-ranking","DREAD risk ranking","Cursor"],["attack-paths","Derive attack paths","Cursor"],["detection-engineering","Detection rules","Cursor"],["tabletop-scenarios","Tabletop exercises","Cursor"],["security-review","Security review playbook","Cursor"],["deepsec-scan","Deep security scan","Cursor"],["api-endpoint-scan","API endpoint scan","Cursor"],["mimir-ingest","RAG ingest","~/.claude"],["mimir-index","RAG index","~/.claude"],["mimir-serve","RAG serve","~/.claude"],["mimir-chat","RAG chat","~/.claude"],["mimir-deploy-kind","Deploy to kind","~/.claude"],["mimir-egress-audit","Egress audit","~/.claude"],["marvin-v1-orchestration","Marvin orchestration","~/.claude"],["graphify","Diagrams/graphs","~/.claude"],["mck-core-meetings","Meeting prep","~/.claude"],["archflow","Architecture workflow","~/.claude"],["build-teams-mediabot","Teams mediabot","~/.claude"],["wiz-vulnerability-cross-correlation","Wiz+Dynatrace CVE RCA","Documents"]],
- agents:["backend-architect","business-panel-experts","deep-research-agent","devops-architect","frontend-architect","learning-guide","performance-engineer","pm-agent","python-expert","quality-engineer","refactoring-expert","requirements-analyst","root-cause-analyst","security-engineer","socratic-mentor","system-architect","technical-writer","mimir (custom)"],
- commands:["analyze","brainstorm","build","business-panel","cleanup","design","document","estimate","explain","git","help","implement","improve","index","load","pm","reflect","research","save","select-tool","spawn","spec-panel","task","test","troubleshoot","workflow"],
- mcp:[["context7","Docs lookup","Cursor"],["Atlassian","Jira+Confluence","Cursor"],["pyright","Python LSP","Cursor"],["typescript","TS LSP","Cursor"],["skill-marketplace","Internal marketplace","Claude Code"],["office-memory","O365 memory","VS Code"],["avm-dev","name-only","Cursor global"],["pm-agents-npn","name-only","Cursor global"],["Atlassian-MCP-Server","name-only","Cursor global"],["marvin-cocierge-services","name-only","Cursor global"],["Magic","UI gen","SuperClaude"],["Morphllm","fast-apply","SuperClaude"],["Playwright","browser","SuperClaude"],["Sequential","reasoning","SuperClaude"],["Serena","semantic code","SuperClaude"],["Tavily","web search","SuperClaude"]],
- projects:[["marvin-mem-v6","Per-user memory (Hindsight L1–L4)"],["marvin-slack-connectivity","Slack surface"],["marvin-microvm-openclaw","microVM sandboxing"],["marvin-capture","Capture pipeline"],["marvin-skill-marketplace","Skill/agent marketplace"],["marvin-5 / marvin-7","Platform iterations / SEALs"],["forge / IdeaForge AI","Agentic PM"],["openclaw-msteams","Teams channel plugin"],["turbo-whisper","Claude Code TTS plugin"],["deployer-k8s-naas","K8s NaaS deployer"],["naas-ack-operator","AWS ACK operator"],["container-tf-patterns","Terraform patterns"]],
- doctrine:[["Fan-out","Parallel sub-agents, each owns a slice; write to disk, return summaries"],["Classify-and-act","Triage into buckets, route each to the right handler"],["Adversarial","Red-team every builder pass; nothing 'done' until it survives"],["Loop-until-done","Explicit Definition of Done; iterate build→verify→fix"],["Tournament","Generate N candidates, score vs rubric, advance the winner"]]
-};
-const SEED={updated:null,items:[{date:new Date().toISOString().slice(0,10),provider:"system",category:"tooling",impact:"low",title:"Awaiting first scheduled run",summary:"The daily/weekly loops will fill this feed.",url:""}]};
-let LIVE=false, OVERVIEW=null, SESSIONS=[], AGENTS=[], FEED=[], curView="overview", charts={}, timer=null;
+const PROV={local:['--c-local','#4d7cfe','local (this machine)'],mcp:['--c-mcp','#9a7dff','MCP connectors'],web:['--c-web','#f5a623','external web'],llm:['--c-llm','#f0506e','external LLM']};
+const api=async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw new Error(r.status);return r.json();};
+const post=async(p,b)=>{const r=await fetch(p,{method:'POST',body:JSON.stringify(b)});return r.json();};
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtK=n=>{n=+n||0;const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(1)+'B':a>=1e6?(n/1e6).toFixed(1)+'M':a>=1e3?(n/1e3).toFixed(1)+'k':String(Math.round(n));};
+const fmtDur=s=>s==null?'–':s<60?s+'s':s<3600?Math.round(s/60)+'m':(s/3600).toFixed(1)+'h';
+const ago=ts=>{if(!ts)return'';let d=(Date.now()-(typeof ts==='number'&&ts<1e12?ts*1000:Date.parse(ts)||ts))/1000;if(typeof ts==='number'&&ts>1e12)d=(Date.now()-ts)/1000;return d<60?'just now':d<3600?Math.round(d/60)+'m ago':d<86400?Math.round(d/3600)+'h ago':Math.round(d/86400)+'d ago';};
+const cssv=v=>getComputedStyle(document.body).getPropertyValue(v).trim();
+let LIVE=false,OVER=null,SESS=[],HEALTH=null,FEED=[],TOPO=null,CURSOR=null,CONFIG={dashboards:[]},DSCACHE={},view='overview',charts={},timer=null;
 
-const api=async(p)=>{const r=await fetch(p,{cache:"no-store"});if(!r.ok)throw new Error(r.status);return r.json();};
-const el=(h)=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
-const fmtDur=(s)=>s==null?"–":s<60?s+"s":s<3600?Math.round(s/60)+"m":(s/3600).toFixed(1)+"h";
-const fmtK=(n)=>{n=+n||0;return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':String(n);};
-function spark(arr){const mx=Math.max.apply(null,arr.concat([1]));return '<div style="display:flex;align-items:flex-end;gap:2px;height:60px">'+arr.map(v=>`<div title="${v} tokens" style="flex:1;min-width:2px;height:${Math.max(3,Math.round(v/mx*60))}px;background:linear-gradient(180deg,#22d3ee,#5b8cff);border-radius:2px"></div>`).join('')+'</div>';}
-/* provenance: internal (machine) vs external (web/LLM/cloud) */
-const WEBT=new Set(['WebSearch','WebFetch','web_search','web_fetch']);
-function classifyTool(name,summary){const n=name||'',low=n.toLowerCase();
-  if(WEBT.has(n)||n.startsWith('mcp__')||low.includes('chrome')||low.includes('browser')||low.includes('playwright')||low.includes('tavily')||low.startsWith('web'))return 'external';
-  if(n==='Bash')return /(curl |wget |https?:\/\/|npm |npx |pip |git clone|git pull|git push|git fetch|brew |docker (pull|push)|kubectl |aws |gcloud )/.test((summary||'').toLowerCase())?'external':'internal';
-  return 'internal';}
-function provColor(pct){pct=pct==null?0:pct;const a=[91,140,255],b=[255,159,67];const c=a.map((x,i)=>Math.round(x+(b[i]-x)*pct));return `rgb(${c[0]},${c[1]},${c[2]})`;}
-function provBar(intl,ext){const tot=(intl||0)+(ext||0)||1,ep=Math.round((ext||0)/tot*100);
-  return `<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;border:1px solid #1e2a3d"><div style="width:${100-ep}%;background:#5b8cff"></div><div style="width:${ep}%;background:#ff9f43"></div></div>
-   <div class="muted" style="font-size:11px;margin-top:4px"><span style="color:#5b8cff">■</span> internal (machine) ${100-ep}% &nbsp;·&nbsp; <span style="color:#ff9f43">■</span> external (web/LLM) ${ep}%</div>`;}
-const CAT={internal:['#5b8cff','int','internal (machine)'],firm:['#a78bfa','firm','firm MCP'],web:['#ff9f43','web','external web'],llm:['#ff5d6c','llm','external LLM']};
-const FIRM_MCP_C=new Set(['atlassian','jira','confluence','skill-marketplace','marvin-cocierge-services','avm-dev','pm-agents-npn','office-memory']);
-function classifyTool4(name,summary){const n=name||'',low=n.toLowerCase();
-  if(n.startsWith('mcp__')){const s=(n.split('__')[1]||'').toLowerCase();if(FIRM_MCP_C.has(s)||/(marvin|mck|firm|internal|jira|confluence)/.test(s))return 'firm';if(/(openai|gemini|bedrock|perplexity|groq|mistral|llm)/.test(s))return 'llm';if(/(tavily|context7|brave|exa|firecrawl)/.test(s))return 'web';return 'firm';}
-  if(WEBT.has(n)||low.startsWith('web')||low.includes('chrome')||low.includes('browser')||low.includes('playwright')||low.includes('tavily'))return 'web';
-  if(/(openai|gemini|bedrock|perplexity|groq)/.test(low))return 'llm';
-  if(n==='Bash')return /(curl |wget |https?:\/\/|npm |git clone|git pull|git push|brew |docker (pull|push)|aws |gcloud )/.test((summary||'').toLowerCase())?'web':'internal';
-  return 'internal';}
-function cat4(e){return (['internal','firm','web','llm'].includes(e.origin))?e.origin:classifyTool4(e.tool,e.summary);}
-function prov4Bar(p){const ks=['internal','firm','web','llm'];const tot=ks.reduce((a,k)=>a+(+p[k]||0),0)||1;
-  return `<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid #1e2a3d">${ks.map(k=>`<div title="${CAT[k][2]} ${Math.round((+p[k]||0)/tot*100)}%" style="width:${(+p[k]||0)/tot*100}%;background:${CAT[k][0]}"></div>`).join('')}</div>
-   <div class="muted" style="font-size:11px;margin-top:5px">${ks.map(k=>`<span style="color:${CAT[k][0]}">■</span> ${CAT[k][2]} ${Math.round((+p[k]||0)/tot*100)}% <span style="opacity:.6">(${(+p[k]||0)})</span>`).join(' &nbsp; ')}</div>`;}
-function feedGraphSVG(items){
-  const its=items.filter(i=>i.date).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  if(!its.length)return '<p class="muted">No dated feed items yet — the daily loop will populate this.</p>';
-  const provs=[...new Set(its.map(i=>i.provider))];
-  const dates=[...new Set(its.map(i=>i.date))].sort();
-  const padL=120,padT=18,colW=110,rowH=30,r=7;
-  const W=padL+Math.max(1,dates.length)*colW+30,H=padT*2+provs.length*rowH+8;
-  const xi=d=>padL+dates.indexOf(d)*colW+colW/2,yi=p=>padT+provs.indexOf(p)*rowH+rowH/2;
-  const impC=i=>i==='high'?'#ff5d6c':i==='medium'?'#ffb020':'#3fb950';
-  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="font:11px sans-serif">`;
-  provs.forEach(p=>{const y=yi(p);s+=`<text x="8" y="${y+4}" fill="#8493a8">${esc((p||'').slice(0,16))}</text><line x1="${padL}" y1="${y}" x2="${W-15}" y2="${y}" stroke="#141d2e"/>`;});
-  dates.forEach(d=>{const x=xi(d);s+=`<text x="${x}" y="12" text-anchor="middle" fill="#566479">${esc(d.slice(5))}</text>`;});
-  const byProv={};its.forEach(i=>{(byProv[i.provider]=byProv[i.provider]||[]).push(i);});
-  Object.values(byProv).forEach(arr=>{for(let k=1;k<arr.length;k++){const a=arr[k-1],b=arr[k];s+=`<line x1="${xi(a.date)}" y1="${yi(a.provider)}" x2="${xi(b.date)}" y2="${yi(b.provider)}" stroke="#2a3850" stroke-width="1.3"/>`;}});
-  its.forEach(i=>{const x=xi(i.date),y=yi(i.provider);s+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${impC(i.impact)}" stroke="#0a0e16" stroke-width="1.5" style="cursor:${i.url?'pointer':'default'}" ${i.url?`onclick="window.open('${esc(i.url)}','_blank')"`:''}><title>${esc(i.date)} · ${esc(i.provider)} · ${esc(i.impact)} · ${esc(i.title)}</title></circle>`;});
-  return s+`</svg>`;
-}
-const ago=(ts)=>{if(!ts)return"";const d=(Date.now()-Date.parse(ts))/1000;return d<60?"just now":d<3600?Math.round(d/60)+"m ago":d<86400?Math.round(d/3600)+"h ago":Math.round(d/86400)+"d ago";};
-const esc=(s)=>(s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+async function detect(){try{HEALTH=await api('/api/health');LIVE=!!HEALTH.projectsExist;}catch(e){LIVE=false;HEALTH=null;}
+  const b=document.getElementById('banner');if(!b)return;
+  if(LIVE){b.className='banner live';b.innerHTML=`<span>●</span> LIVE — reading your sessions from <code>${esc(HEALTH.projectsDir)}</code>${HEALTH.pro?' · <b>Pro engine active</b>':''}`;}
+  else{b.className='banner down';b.innerHTML='⚠ Server not reachable — run the AgentLens service (port 7717).';}}
+async function loadCore(){if(LIVE){try{OVER=await api('/api/overview');}catch(e){OVER=null;}try{SESS=await api('/api/sessions');}catch(e){SESS=[];}try{CONFIG=await api('/api/config')||{};}catch(e){}if(!CONFIG.dashboards)CONFIG.dashboards=[];}
+  try{const j=await api('/feed.json');FEED=j.items||[];}catch(e){FEED=[];}}
+async function ds(name){if(DSCACHE[name])return DSCACHE[name];const d=await api('/api/dataset?name='+encodeURIComponent(name));DSCACHE[name]=d;return d;}
 
-/* ---------------- server detection + data ---------------- */
-async function detect(){
-  try{const h=await api('/api/health');LIVE=!!h.projectsExist; setBanner(LIVE,h);}
-  catch(e){LIVE=false;setBanner(false,null);}
-}
-function setBanner(live,h){
-  const b=document.getElementById('banner');
-  if(live){b.className="banner live";b.innerHTML=`<span class="dot"></span> LIVE — reading sessions from <code>${esc(h.projectsDir)}</code>`;}
-  else{b.className="banner down";b.innerHTML=`⚠ Server/API not reachable — showing snapshot. Start it: <code>bash ~/claude-projects/agentlens/platform/start.sh</code> → then open <code>http://127.0.0.1:7717/</code>`;}
-}
-async function loadData(){
-  if(LIVE){
-    try{OVERVIEW=await api('/api/overview');}catch(e){OVERVIEW=null;}
-    try{SESSIONS=await api('/api/sessions');}catch(e){SESSIONS=[];}
-  }
-  try{const j=await api('/feed.json');FEED=j.items||[];}catch(e){FEED=SEED.items;}
-  document.getElementById('k-sessions').textContent=OVERVIEW?OVERVIEW.sessions:0;
-  document.getElementById('k-agents2').textContent=OVERVIEW?OVERVIEW.subagents:DATA.agents.length;
-  if(LIVE&&OVERVIEW&&(!OVERVIEW.version||!OVERVIEW.tokens)){
-    const b=document.getElementById('banner');b.className="banner down";
-    b.innerHTML='⚠ Your dashboard server is running OLD code — tokens, live, &amp; provenance won\'t appear until you restart it. Run <code>bash ~/claude-projects/agentlens/platform/install-service.sh</code> (it frees the port and reloads), then hard-refresh.';
-  }
-}
-async function refreshAll(force){await detect();await loadData();
-  if(curView==='graph'&&!force&&BRAIN.sim){/* leave the live brain sim undisturbed on auto-refresh */}
-  else{render();}
-  if(force)flash();}
-function flash(){const c=document.getElementById('clock');c.style.color="#3fb950";setTimeout(()=>c.style.color="",500);}
+document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('on'));n.classList.add('on');view=n.dataset.v;DSCACHE={};render();});
+async function refresh(){await detect();await loadCore();render();}
+function render(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};
+  ({overview:vOverview,claude:vClaude,cursor:vCursor,platforms:vPlatforms,provenance:vProv,topology:vTopo,ultracode:vUltra,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed}[view]||vOverview)();}
 
-/* ---------------- router ---------------- */
-document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');curView=b.dataset.v;render();});
-function render(){
-  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};
-  ({overview:vOverview,sessions:vSessions,agents:vAgents,graph:vGraph,feed:vFeed,topology:vTopology,ultracode:vUltra}[curView]||vOverview)();
-}
+function shell(title,sub,actions){return `<div class="head"><div><h1>${title}</h1><p class="sub">${sub||''}</p></div><div class="spacer"></div>${actions||''}</div><div id="banner" class="banner"></div>`;}
+function kpi(v,l,d){return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div>${d?`<div class="d">${d}</div>`:''}</div>`;}
 
-/* ---------------- views ---------------- */
-function kpi(v,l){return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`;}
-function vOverview(){
-  const o=OVERVIEW; const tk=o&&o.tokens?o.tokens:null; const pv=o&&o.provenance?o.provenance:null;
-  const m=document.getElementById('main');
-  m.innerHTML=`<h1>Overview</h1><p class="sub">Live monitoring across Claude Code, Cowork &amp; Cursor sessions on this machine.${o&&o.bySource?` <span class="muted">Sources: ${Object.entries(o.bySource).map(([k,v])=>`${esc(k)} ${v}`).join(' · ')}</span>`:''}</p>
-   <div class="kpis">
-     ${kpi(o?o.sessions:'–','Sessions')}${kpi(o&&o.live!=null?`<span style="color:#19c37d">${o.live}</span>`:'–','Live (15m)')}${kpi(o?o.subagents:'–','Sub-agents')}
-     ${kpi(o?o.toolCalls:'–','Tool calls')}${kpi(o?o.projects:DATA.projects.length,'Workflows')}${kpi(pv?`<span style="color:${provColor(pv.extPct)}">${(pv.extPct*100).toFixed(0)}%</span>`:'–','External data')}
-   </div>
-   <div class="kpis" style="grid-template-columns:repeat(5,1fr)">
-     ${kpi(tk?fmtK(tk.inTotal):'–','Tokens in (incl cache)')}${kpi(tk?fmtK(tk.out):'–','Tokens out ↑')}
-     ${kpi(tk?fmtK(tk.cacheRead):'–','Cache read')}${kpi(tk?fmtK(tk.in):'–','Uncached in')}${kpi(tk?(tk.cacheHit*100).toFixed(0)+'%':'–','Cache hit')}
-   </div>
-   ${pv?`<div class="card" style="margin-bottom:16px"><h3>Data provenance <span class="tag">click a category to see what used it &amp; how</span></h3>${prov4Bar(pv)}
-     <div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap">${['internal','firm','web','llm'].map(k=>`<button class="btn" onclick="openProvenance('${k}')"><span style="color:${CAT[k][0]}">●</span> ${CAT[k][2]} (${pv[k]||0})</button>`).join('')}</div></div>`:''}
-   ${LIVE?`<div class="card" style="margin-bottom:16px" id="cursorCard"><h3>🖱️ Cursor activity <span class="tag">experimental · parsed from Cursor's SQLite state</span></h3><div id="cursorBody" class="muted">reading Cursor state…</div></div>`:''}
-   ${(o&&o.topSessions&&o.topSessions.length)?`<div class="card" style="margin-bottom:16px"><h3>Top token-consuming sessions <span class="tag">what's burning tokens — click to drill in</span></h3>
-     ${o.topSessions.map(t=>{const mx=o.topSessions[0].tokensTotal||1;return `<div class="row" onclick="openSession('${encodeURIComponent(t.file)}')"><div style="flex:none;width:200px"><div class="rn">${esc(t.project)} ${t.live?'<span style=\"color:#19c37d\">●</span>':''}</div><div class="rd">${esc(t.source||'')} · ${Math.round((t.extPct||0)*100)}% external</div></div><div style="flex:1;background:#0f1626;border-radius:5px;overflow:hidden;align-self:center"><div style="height:14px;width:${Math.round((t.tokensTotal||0)/mx*100)}%;background:linear-gradient(90deg,#5b8cff,#22d3ee)"></div></div><div style="flex:none;width:140px;text-align:right"><div class="rn">${fmtK(t.tokensTotal||0)}</div><div class="rd">${fmtK(t.tokensInTotal||0)} in / ${fmtK(t.tokensOut||0)} out</div></div></div>`;}).join('')}</div>`:''}
-   <div class="grid g3">
-     <div class="card"><h3>Token usage over time <span class="tag">in vs out per day</span></h3><div class="chart-box"><canvas id="cTok"></canvas></div></div>
-     <div class="card"><h3>⚡ Optimization suggestions</h3><div id="sugg"></div></div>
-   </div>
-   <div class="grid g3" style="margin-top:14px">
-     <div class="card"><h3>Tool usage <span class="tag">across recent sessions</span></h3><div class="chart-box"><canvas id="cTools"></canvas></div></div>
-     <div class="card"><h3>Sessions by project</h3><div class="chart-box"><canvas id="cProj"></canvas></div></div>
-   </div>
-   <div class="card" style="margin-top:14px"><h3>Recent sessions <span class="tag">click to drill in</span></h3>
-     <div class="tbl-wrap"><table><thead><tr><th>Project</th><th>Last activity</th><th>Msgs</th><th>Tools</th><th>Sub-agents</th><th>Tokens in/out</th><th>Duration</th><th>Model</th></tr></thead>
-     <tbody id="recent"></tbody></table></div></div>`;
-  document.getElementById('sugg').innerHTML=(o&&o.suggestions?o.suggestions:[{level:'info',text:LIVE?'No suggestions yet.':'Start the server to get token-optimization suggestions from your real sessions.'}]).map(s=>`<div class="row" style="cursor:default"><span class="chip imp-${s.level==='high'?'high':s.level==='med'?'medium':'low'}" style="align-self:flex-start">${esc(s.level)}</span><div class="rd" style="color:var(--txt)">${esc(s.text)}</div></div>`).join('');
-  if(!o){document.getElementById('recent').innerHTML=`<tr><td colspan="8" class="muted" style="padding:18px">No live data. Start the server (see banner) to see your sessions.</td></tr>`;
-    drawTokens('cTok',[]);drawBar('cTools',DATA.mcp.slice(0,8).map(x=>x[0]),DATA.mcp.slice(0,8).map(_=>0));drawDoughnut('cProj',DATA.projects.map(p=>p[0].split(' ')[0]).slice(0,7),DATA.projects.slice(0,7).map(_=>1));return;}
-  const rows=(o.recent||[]);
-  document.getElementById('recent').innerHTML=rows.map(r=>`<tr onclick="openSession('${encodeURIComponent(r.file)}')">
-     <td><b>${esc(r.project)}</b></td><td>${ago(r.lastTs)}</td><td>${r.messages}</td><td>${r.toolCalls}</td>
-     <td>${r.subagentFiles||0}</td><td class="muted">${fmtK(r.tokensInTotal||0)} / ${fmtK(r.tokensOut||0)}</td><td>${fmtDur(r.durationSec)}</td><td>${(r.models||[]).map(x=>`<span class="chip c-mod">${esc(x.replace('claude-',''))}</span>`).join(' ')}</td></tr>`).join('');
-  drawTokens('cTok',o.tokensByDay||[]);
-  drawBar('cTools',(o.byTool||[]).slice(0,9).map(x=>x.name),(o.byTool||[]).slice(0,9).map(x=>x.count));
-  const src=(SESSIONS&&SESSIONS.length)?SESSIONS:(o.recent||[]);
-  const pc={};src.forEach(s=>pc[s.project]=(pc[s.project]||0)+1);
-  drawDoughnut('cProj',Object.keys(pc).slice(0,8),Object.values(pc).slice(0,8));
-  if(LIVE)fillCursor();
-}
-async function fillCursor(){const el=document.getElementById('cursorBody');if(!el)return;
-  try{const c=await api('/api/cursor');
-    if(c&&c.exists===false){el.innerHTML='No Cursor data found (or restart the server to enable /api/cursor). '+(c.error?esc(c.error):'');return;}
-    el.innerHTML=`<div class="kpis" style="grid-template-columns:repeat(4,1fr);margin:0 0 10px">${kpi(c.dbCount||0,'workspaces')}${kpi(c.composers||0,'chats / composers')}${kpi(c.messages||0,'messages')}${kpi(c.toolMentions||0,'tool / MCP mentions')}</div>
-     ${(c.models&&c.models.length)?`<div><span class="muted">Models seen:</span> ${c.models.map(m=>`<span class="chip c-mod">${esc(m)}</span>`).join(' ')}</div>`:''}
-     ${(c.mcp&&c.mcp.length)?`<div style="margin-top:6px"><span class="muted">MCP:</span> ${c.mcp.map(m=>`<span class="badge" style="background:rgba(167,139,250,.18);color:#a78bfa">${esc(m)}</span>`).join(' ')}</div>`:''}
-     <p class="muted" style="margin-top:8px;font-size:11px">${esc(c.note||'')}</p>`;
-  }catch(e){el.innerHTML='Cursor reader unavailable — restart the server to enable /api/cursor.';}
-}
-function vSessions(){
-  const m=document.getElementById('main');
-  m.innerHTML=`<h1>Sessions</h1><p class="sub">Every Claude Code session transcript on this machine. Click a row for the full transaction flow.</p>
-   <div class="controls"><input type="search" id="q" placeholder="search project / session…" oninput="fillSessions()"/>
-   <select id="sort" onchange="fillSessions()"><option value="lastTs">Sort: recent</option><option value="toolCalls">Sort: tool calls</option><option value="subagentFiles">Sort: sub-agents</option><option value="messages">Sort: messages</option></select></div>
-   <div class="tbl-wrap"><table><thead><tr><th>Project</th><th>Source</th><th>Session</th><th>Last activity</th><th>Msgs</th><th>Tools</th><th>Sub-agents</th><th>Ext %</th><th>Duration</th><th>Model</th></tr></thead><tbody id="srows"></tbody></table></div>`;
-  fillSessions();
-}
-function fillSessions(){
-  if(!LIVE){document.getElementById('srows').innerHTML=`<tr><td colspan="10" class="muted" style="padding:18px">Start the server to list live sessions.</td></tr>`;return;}
-  const q=(document.getElementById('q').value||'').toLowerCase(), sort=document.getElementById('sort').value;
-  let rows=SESSIONS.filter(s=>(`${s.project} ${s.sessionId}`).toLowerCase().includes(q));
-  rows.sort((a,b)=>sort==='lastTs'?String(b.lastTs).localeCompare(String(a.lastTs)):(b[sort]||0)-(a[sort]||0));
-  document.getElementById('srows').innerHTML=rows.map(r=>`<tr onclick="openSession('${encodeURIComponent(r.file)}')">
-    <td><b>${esc(r.project)}</b></td><td><span class="chip" style="background:#1a2436;color:#22d3ee">${esc(r.source||'—')}</span></td>
-    <td class="muted">${r.live?'<span style="color:#19c37d">●</span> ':''}${esc((r.sessionId||'').slice(0,8))}</td><td>${ago(r.lastTs)}</td>
-    <td>${r.messages}</td><td>${r.toolCalls}</td><td>${r.subagentFiles||0}</td>
-    <td style="color:${provColor(r.extPct||0)};font-weight:700">${Math.round((r.extPct||0)*100)}%</td><td>${fmtDur(r.durationSec)}</td>
-    <td>${(r.models||[]).map(x=>`<span class="chip c-mod">${esc(x.replace('claude-',''))}</span>`).join(' ')}</td></tr>`).join('')||`<tr><td colspan="10" class="muted" style="padding:16px">No matches.</td></tr>`;
-}
-async function vAgents(){
-  const m=document.getElementById('main');
-  m.innerHTML=`<h1>Agents &amp; sub-agents</h1><p class="sub">Every sub-agent execution (fan-out branches) across all sessions. Click to open its flow.</p><div class="tbl-wrap"><table><thead><tr><th>Agent</th><th>Project</th><th>Session</th><th>Last activity</th><th>Msgs</th><th>Tools</th><th>Duration</th><th>Result</th></tr></thead><tbody id="arows"><tr><td colspan="8" class="muted" style="padding:16px">${LIVE?'loading…':'Start the server to see agents.'}</td></tr></tbody></table></div>`;
-  if(!LIVE)return;
-  try{AGENTS=await api('/api/agents');}catch(e){AGENTS=[];}
-  document.getElementById('arows').innerHTML=AGENTS.map(a=>`<tr onclick="openSession('${encodeURIComponent(a.file)}')">
-    <td class="muted">${esc(a.agentId)}</td><td><b>${esc(a.project)}</b></td><td class="muted">${esc(a.session)}</td>
-    <td>${ago(a.lastTs)}</td><td>${a.messages}</td><td>${a.toolCalls}</td><td>${fmtDur(a.durationSec)}</td>
-    <td class="muted">${esc(a.lastText||'')}</td></tr>`).join('')||`<tr><td colspan="8" class="muted" style="padding:16px">No sub-agents found.</td></tr>`;
-}
-function vFeed(){
-  const m=document.getElementById('main');
-  const provs=[...new Set(FEED.map(i=>i.provider))].sort(), cats=[...new Set(FEED.map(i=>i.category))].sort();
-  m.innerHTML=`<h1>AI Feed</h1><p class="sub">Latest in AI — refreshed by the daily/weekly research loops (writes <code>feed.json</code>).</p>
-   <div class="controls"><input type="search" id="fq" placeholder="search feed…" oninput="fillFeed()"/>
-     <select id="fp" onchange="fillFeed()"><option value="">All providers</option>${provs.map(p=>`<option>${esc(p)}</option>`).join('')}</select>
-     <select id="fc" onchange="fillFeed()"><option value="">All categories</option>${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
-     <select id="fi" onchange="fillFeed()"><option value="">All impact</option><option>high</option><option>medium</option><option>low</option></select></div>
-   <div class="card" style="margin-bottom:14px"><h3>Chronological graph <span class="tag">provider lanes × time · ● colour = impact · click a node → source</span></h3><div style="overflow:auto;max-height:280px">${feedGraphSVG(FEED)}</div></div>
-   <div class="grid g3"><div class="card"><h3>Feed <span class="tag" id="fcount"></span></h3><div class="feed" id="feed"></div></div>
-   <div style="display:flex;flex-direction:column;gap:14px"><div class="card"><h3>By provider</h3><div class="chart-box" style="height:200px"><canvas id="cFp"></canvas></div></div>
-   <div class="card"><h3>By impact</h3><div class="chart-box" style="height:160px"><canvas id="cFi"></canvas></div></div></div></div>`;
-  fillFeed();
-}
-function fillFeed(){
-  const q=(document.getElementById('fq').value||'').toLowerCase(),fp=document.getElementById('fp').value,fc=document.getElementById('fc').value,fi=document.getElementById('fi').value;
-  let items=FEED.filter(i=>(!fp||i.provider===fp)&&(!fc||i.category===fc)&&(!fi||i.impact===fi)&&(!q||(`${i.title} ${i.summary} ${i.provider}`).toLowerCase().includes(q)));
-  document.getElementById('fcount').textContent=items.length+" items";
-  document.getElementById('feed').innerHTML=items.length?items.map(i=>`<div class="item"><div class="h"><span class="chip c-prov">${esc(i.provider)}</span><span class="chip imp-${i.impact}">${esc(i.impact)}</span><span class="t">${esc(i.title)}</span><span class="src">${esc(i.date||'')}</span></div><div class="muted">${esc(i.summary||'')} ${i.url?`· <a href="${esc(i.url)}" target="_blank">source ↗</a>`:''}</div></div>`).join(''):`<div class="muted" style="padding:18px;text-align:center">No items yet — the loops will populate this overnight.</div>`;
-  const by=k=>{const m={};items.forEach(i=>m[i[k]||'–']=(m[i[k]||'–']||0)+1);return m;};
-  const p=by('provider'),im=by('impact');
-  drawDoughnut('cFp',Object.keys(p),Object.values(p));
-  drawDoughnut('cFi',Object.keys(im),Object.values(im),Object.keys(im).map(k=>k==='high'?'#ff5d6c':k==='medium'?'#ffb020':'#3fb950'));
-}
-function vTopology(){
-  const m=document.getElementById('main');
-  const sec=(t,sub,arr,fmt)=>`<div class="card" style="margin-bottom:14px"><h3>${t} <span class="tag">${arr.length}</span></h3><p class="muted" style="margin:-4px 0 10px;font-size:12px">${sub}</p>${arr.map(fmt).join('')}</div>`;
-  const SEC=['scout-product-context','synthesize-system-schema','actor-profiling','stride-analysis','dread-ranking','attack-paths','detection-engineering','tabletop-scenarios','security-review','deepsec-scan','api-endpoint-scan'];
-  const suite=s=>(s[0].startsWith('threatlens')||SEC.includes(s[0]))?'ThreatLens — security threat-modeling pipeline (scout → schema → STRIDE → DREAD → attack-paths → detection → tabletop)':s[0].startsWith('mimir')?'Mimir — self-hosted RAG lifecycle (ingest → index → serve → chat → deploy → egress-audit)':s[0].startsWith('marvin')?'Marvin — agentic platform orchestration':'Standalone utilities';
-  const groups={};DATA.skills.forEach(s=>{(groups[suite(s)]=groups[suite(s)]||[]).push(s);});
-  const suiteCard=`<div class="card" style="margin-bottom:14px"><h3>🧩 Skill suites <span class="tag">what your skills actually accomplish, grouped by capability</span></h3>
-    ${Object.entries(groups).map(([g,arr])=>`<div class="row" style="cursor:default"><div><div class="rn">${esc(g.split(' — ')[0])}</div><div class="rd">${esc(g.split(' — ')[1]||'')}<br><span style="opacity:.7">${arr.map(s=>esc(s[0])).join(', ')}</span></div></div><div style="margin-left:auto"><span class="pill">${arr.length}</span></div></div>`).join('')}</div>`;
-  m.innerHTML=`<h1>Topology</h1><p class="sub">The capabilities installed on this machine and what each does — skills (reusable procedures), agents (specialised workers), slash-commands (task entry points), MCP connectors (data sources), and the projects they serve.</p>
-   <div class="card" style="margin-bottom:14px"><h3>Capability graph <span class="tag">AgentLens → suites → skills · agents · MCP (coloured by provenance) — drag &amp; zoom</span></h3>
-     <div id="topoStage" class="vizstage" style="height:440px;border-radius:11px;overflow:hidden"></div></div>
-   ${suiteCard}
-   ${sec('🧩 Skills','Reusable, prescriptive procedures Claude invokes — grouped into the suites above; here each with its one-line purpose and where it lives.',DATA.skills,x=>`<div class="row"><div><div class="rn">${esc(x[0])}</div><div class="rd">${esc(x[1])}</div></div><div style="margin-left:auto"><span class="pill">${esc(x[2])}</span></div></div>`)}
-   ${sec('🤖 Agents','Specialised sub-agent personas (SuperClaude roles + custom) that sessions spawn for focused work — these are the orbs you see fan out in the Brain.',DATA.agents,x=>`<div class="row"><div class="rn">${esc(x)}</div></div>`)}
-   ${sec('⌘ Commands','SuperClaude /sc: slash-commands — entry points that orchestrate skills + agents for a task type.',DATA.commands,x=>`<div class="row"><div class="rn">/sc:${esc(x)}</div></div>`)}
-   ${sec('🔌 MCP servers','Data connectors. Dot colour shows provenance — firm/internal vs external web/LLM (the same scheme used across the dashboard).',DATA.mcp,x=>{const c=classifyTool4('mcp__'+x[0]+'__t');return `<div class="row"><div><div class="rn"><span style="color:${CAT[c][0]}">●</span> ${esc(x[0])}</div><div class="rd">${esc(x[1])} · <span style="color:${CAT[c][0]}">${CAT[c][2]}</span></div></div><div style="margin-left:auto"><span class="pill">${esc(x[2])}</span></div></div>`;})}
-   ${sec('📦 Projects (representative)','The real workflows these capabilities serve.',DATA.projects,x=>`<div class="row"><div><div class="rn">${esc(x[0])}</div><div class="rd">${esc(x[1])}</div></div></div>`)}`;
-  if(typeof d3!=='undefined')setTimeout(()=>TOPO.draw(),0);
-}
-const STRAT={fan:['#5b8cff','fan-out'],tourn:['#22d3ee','tournament'],loop:['#3fb950','loop-until-done'],adv:['#ff5d6c','adversarial'],classify:['#a78bfa','classify-and-act']};
-function ultraStrats(s){const bt=s.byTool||{};const keys=Object.keys(bt);const has=re=>keys.some(k=>re.test(k));
-  const subs=Math.max(+s.subagentFiles||0,+s.subagentSpawns||0),tools=+s.toolCalls||0;const out=[];
-  if(subs>=2)out.push('fan'); if(subs>=3)out.push('tourn');
-  if(tools>=25||has(/TodoWrite|TaskCreate/))out.push('loop');
-  if(has(/test|review|security|lint|check|verify|Bash/i)&&has(/test|review|security|lint|check|verify/i))out.push('adv');
-  else if(has(/test|review|security|lint|verify/i))out.push('adv');
-  if(has(/TaskCreate|TodoWrite/))out.push('classify');
-  return [...new Set(out)];}
-function vUltra(){
-  const m=document.getElementById('main');
-  const sl=(SESSIONS||[]).filter(s=>typeof s.toolCalls==='number');
-  const counts={fan:0,tourn:0,loop:0,adv:0,classify:0},hybrid={};let hybridN=0;
-  sl.forEach(s=>{const st=ultraStrats(s);st.forEach(x=>counts[x]++);if(st.length>=2){hybridN++;}});
-  const maxc=Math.max(1,...Object.values(counts));
-  m.innerHTML=`<h1>ULTRACODE topology</h1><p class="sub">How the doctrine actually shows up in your sessions — detected from sub-agent fan-out, iteration depth, verification steps and task triage. ${LIVE?`<b>${hybridN}</b> of ${sl.length} sessions used a <b>hybrid</b> (≥2) strategy.`:''}</p>
-   <div class="strat">${DATA.doctrine.map(d=>`<div class="c"><b>${esc(d[0])}</b><span class="muted">${esc(d[1])}</span></div>`).join('')}</div>
-   <div class="grid g3" style="margin-top:14px">
-     <div class="card"><h3>Strategy usage across sessions</h3>${LIVE?Object.entries(STRAT).map(([k,v])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:130px;flex:none;color:${v[0]}">● ${v[1]}</span><div style="flex:1;background:#0f1626;border-radius:5px;overflow:hidden"><div style="height:13px;width:${Math.round(counts[k]/maxc*100)}%;background:${v[0]}"></div></div><span class="muted" style="width:36px;text-align:right">${counts[k]}</span></div>`).join(''):'<p class="muted">Start the server to detect strategies.</p>'}</div>
-     <div class="card"><h3>What each strategy maps to</h3><div class="muted" style="font-size:12.5px;line-height:1.9">
-       <span style="color:#5b8cff">●</span> <b>fan-out</b> — ≥2 sub-agents spawned in parallel<br>
-       <span style="color:#22d3ee">●</span> <b>tournament</b> — ≥3 parallel sub-agents (candidate bracket)<br>
-       <span style="color:#3fb950">●</span> <b>loop-until-done</b> — heavy iteration / todo tracking<br>
-       <span style="color:#ff5d6c">●</span> <b>adversarial</b> — test / review / verify / security steps<br>
-       <span style="color:#a78bfa">●</span> <b>classify-and-act</b> — explicit task triage (TaskCreate/Todo)</div></div>
-   </div>
-   <div class="card" style="margin-top:14px"><h3>Sessions by strategy mix <span class="tag">click → flow topology</span></h3><div id="ultraSessions"></div></div>`;
-  document.getElementById('ultraSessions').innerHTML=LIVE?(sl.slice(0,40).map(s=>{const st=ultraStrats(s);return `<div class="row" onclick="openSession('${encodeURIComponent(s.file)}')"><div style="flex:none;width:230px"><div class="rn">${esc(s.project)} ${st.length>=2?'<span class="chip" style="background:#2a1f3a;color:#c9a7ff">hybrid</span>':''}</div><div class="rd">${ago(s.lastTs)} · ${s.subagentFiles||0} sub · ${s.toolCalls} tools</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;align-self:center">${st.length?st.map(x=>`<span class="chip" style="background:${STRAT[x][0]}26;color:${STRAT[x][0]}">${STRAT[x][1]}</span>`).join(''):'<span class="muted">linear</span>'}</div></div>`;}).join('')||'<p class="muted">No sessions yet.</p>'):'<p class="muted">Start the server to inspect live ULTRACODE flows.</p>';
-}
+/* ---------- charts ---------- */
+function mkChart(id,type,labels,datasets,opts){const el=document.getElementById(id);if(!el)return;const grid=cssv('--line'),tick=cssv('--mut');
+  const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:(datasets.length>1),labels:{color:tick,boxWidth:10,font:{size:10}}}},
+   scales:type==='doughnut'||type==='pie'?{}:{x:{ticks:{color:tick,font:{size:10},maxRotation:0,autoSkip:true},grid:{color:grid}},y:{ticks:{color:tick,font:{size:10}},grid:{color:grid}}}};
+  charts[id]=new Chart(el,{type:type==='area'?'line':type,data:{labels,datasets},options:Object.assign(base,opts||{})});}
+const PAL=['#4d7cfe','#2fd0e0','#9a7dff','#f5a623','#2ed47a','#f0506e','#5ec8ff','#ffa94d'];
+function dsStyle(type,i,fill){const c=PAL[i%PAL.length];if(type==='line'||type==='area')return{borderColor:c,backgroundColor:type==='area'?c+'33':c,fill:type==='area',tension:.3,pointRadius:2,borderWidth:2};if(type==='doughnut'||type==='pie')return{backgroundColor:PAL,borderColor:cssv('--panel'),borderWidth:2};return{backgroundColor:c+(fill?'cc':'cc'),borderColor:c,borderWidth:0,borderRadius:4};}
 
-/* ---------------- session drill-down ---------------- */
-async function openSession(encFile){
-  const file=decodeURIComponent(encFile);
-  document.getElementById('drawer').classList.add('open');document.getElementById('dbg').style.display='block';
-  document.getElementById('d-title').textContent='loading…';document.getElementById('d-body').innerHTML='<p class="muted">parsing transcript…</p>';
-  let d;try{d=await api('/api/session?file='+encodeURIComponent(file));}catch(e){document.getElementById('d-body').innerHTML='<p class="muted">Could not load (is the server running?)</p>';return;}
-  if(d.error){document.getElementById('d-body').innerHTML='<p class="muted">'+esc(d.error)+'</p>';return;}
-  const mm=d.meta;
-  document.getElementById('d-title').innerHTML=`Session <span class="muted">${esc((mm.sessionId||'').slice(0,8))}</span> ${mm.source?`<span class="chip" style="background:#1a2436;color:#22d3ee">${esc(mm.source)}</span>`:''}`;
-  let p4=mm.prov;
-  if(!p4){p4={internal:0,firm:0,web:0,llm:0};d.timeline.forEach(e=>{if(e.kind==='tool_use')p4[cat4(e)]++;});}
-  let skills=mm.skills,mcps=mm.mcpServers;
-  if(!skills){const sk=new Set(),mc=new Set();d.timeline.forEach(e=>{if(e.kind==='tool_use'){if(e.mcp)mc.add(e.mcp);else if((e.tool||'').startsWith('mcp__'))mc.add(e.tool.split('__')[1]);if(e.tool==='Skill')sk.add(e.summary||'skill');}});skills=[...sk];mcps=[...mc];}
-  const tl=d.timeline.map(e=>{const o=e.kind==='tool_use'?cat4(e):null;
-     return `<div class="ev ${e.side?'side':''}"><div class="t">${esc((e.ts||'').slice(11,19))}</div>
-     <div class="lane lane-${e.lane}">${e.kind==='tool_use'?esc(e.tool):e.kind}${o?` <span class="badge" style="background:${CAT[o][0]}33;color:${CAT[o][0]}">${CAT[o][1]}</span>`:''}${e.status?` <span class="badge b-${e.status}">${e.status}</span>`:''}</div>
-     <div class="s">${esc(e.summary||'')}${e.turnTokens?` <span class="muted">· ${fmtK(e.turnTokens)} tok</span>`:''}</div></div>`;}).join('');
-  document.getElementById('d-body').innerHTML=`
-    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-      ${kpi(mm.events,'Events')}${kpi(mm.toolCalls,'Tool calls')}${kpi(mm.subagentSpawns,'Spawns')}${kpi(fmtDur(mm.durationSec),'Duration')}</div>
-    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-      ${kpi(fmtK(mm.inTotal||0),'Tokens in (incl cache)')}${kpi(fmtK(mm.tokensOut||0),'Tokens out ↑')}${kpi(fmtK(mm.cacheRead||0),'Cache read')}${kpi(((mm.cacheHit||0)*100).toFixed(0)+'%','Cache hit')}</div>
-    <div class="card" style="margin-bottom:12px"><h3>Data provenance <span class="tag">internal machine · firm MCP · external web · external LLM</span></h3>
-      ${prov4Bar(p4)}
-      <div style="margin-top:9px">${(skills&&skills.length)?`<span class="muted">Skills:</span> ${skills.map(s=>`<span class="chip c-mod">${esc(s)}</span>`).join(' ')} `:''}${(mcps&&mcps.length)?`<br><span class="muted">MCP servers:</span> ${mcps.map(s=>`<span class="badge" style="background:rgba(167,139,250,.18);color:#a78bfa">${esc(s)}</span>`).join(' ')}`:''}${(!skills.length&&!mcps.length)?'<span class="muted">All-local workflow — no skills or external MCP detected.</span>':''}</div></div>
-    ${(d.tools&&d.tools.some(t=>t.tokens))?`<div class="card" style="margin-bottom:12px"><h3>Tokens by tool <span class="tag">where this session's tokens went</span></h3>
-      ${d.tools.slice().sort((a,b)=>(b.tokens||0)-(a.tokens||0)).slice(0,10).map(t=>{const o=(t.origin&&CAT[t.origin])?t.origin:'internal';const mx=Math.max.apply(null,d.tools.map(x=>x.tokens||0).concat([1]));return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span style="width:140px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="color:${CAT[o][0]}">●</span> ${esc(t.name)} <span class="muted">×${t.count}</span></span><div style="flex:1;background:#0f1626;border-radius:5px;overflow:hidden"><div style="height:12px;width:${Math.round((t.tokens||0)/mx*100)}%;background:${CAT[o][0]}"></div></div><span class="muted" style="width:64px;text-align:right">${fmtK(t.tokens||0)}</span></div>`;}).join('')}</div>`:''}
-    ${(mm.tokenTurns&&mm.tokenTurns.length)?`<div class="card" style="margin-bottom:12px"><h3>Output tokens per assistant turn <span class="tag">${mm.tokenTurns.length} turns</span></h3>${spark(mm.tokenTurns)}</div>`:''}
-    <div class="card" style="margin-bottom:12px"><h3>Flow of control</h3>${flowSVG(d.flow)}</div>
-    ${d.subagents.length?`<div class="card" style="margin-bottom:12px"><h3>Sub-agents <span class="tag">${d.subagents.length}</span></h3>
-      ${d.subagents.map(s=>`<div class="row" onclick="openSession('${encodeURIComponent(s.file)}')"><div><div class="rn">${esc(s.agentId)}</div><div class="rd">${s.toolCalls} tools · ${esc(s.lastText||'')}</div></div><div style="margin-left:auto"><span class="pill">${fmtDur(s.durationSec)}</span></div></div>`).join('')}</div>`:''}
-    <div class="card"><h3>Transaction timeline <span class="tag">${d.timeline.length} events · ⬩ = sub-agent lane</span></h3><div class="tl">${tl||'<p class="muted">no events</p>'}</div></div>`;
-}
-function flowSVG(flow){
-  const n=flow.nodes,subs=n.filter(x=>x.type!=='session');
-  const W=Math.max(560,120+subs.length*150),rowY=110,boxW=150,boxH=46;
-  let s=`<div class="flow"><svg width="${W}" height="190" viewBox="0 0 ${W} 190">`;
-  // session node
-  s+=`<g class="node"><rect x="${W/2-90}" y="20" width="180" height="50" fill="#16223a" stroke="#5b8cff"/>
-      <text x="${W/2}" y="42" text-anchor="middle" fill="#cfe0ff" font-weight="bold">session ${esc(n[0].label)}</text>
-      <text x="${W/2}" y="58" text-anchor="middle" fill="#8493a8">${n[0].tools} tool calls</text></g>`;
-  subs.forEach((sn,i)=>{
-    const x=70+i*150, cx=x+boxW/2;
-    s+=`<line x1="${W/2}" y1="70" x2="${cx}" y2="${rowY}" stroke="#33405a"/>`;
-    s+=`<g class="node"><rect x="${x}" y="${rowY}" width="${boxW}" height="${boxH}" fill="#1a1530" stroke="#a78bfa"/>
-        <text x="${cx}" y="${rowY+19}" text-anchor="middle" fill="#d8ccff">${esc(sn.label.slice(0,22))}</text>
-        <text x="${cx}" y="${rowY+35}" text-anchor="middle" fill="#8493a8">${sn.tools} tools</text></g>`;
-  });
-  if(!subs.length)s+=`<text x="${W/2}" y="120" text-anchor="middle" fill="#8493a8">no fan-out (single-agent session)</text>`;
-  return s+`</svg></div>`;
-}
+/* ---------- query engine (client-side over datasets) ---------- */
+function runQuery(rows,q){let r=rows.slice();(q.filters||[]).forEach(f=>{if(!f.col||f.val==='')return;r=r.filter(row=>{const a=row[f.col],b=f.val;const na=+a,nb=+b;
+  switch(f.op){case'=':return String(a)==b;case'!=':return String(a)!=b;case'>':return na>nb;case'<':return na<nb;case'contains':return String(a==null?'':a).toLowerCase().includes(String(b).toLowerCase());default:return true;}});});
+  if(q.groupBy){const m={};r.forEach(row=>{const k=row[q.groupBy]==null?'—':row[q.groupBy];const g=m[k]||(m[k]={k,_n:0,_s:0});g._n++;g._s+=(+row[q.aggCol]||0);});
+    let g=Object.values(m).map(x=>({label:String(x.k),value:q.agg==='count'?x._n:q.agg==='avg'?(x._n?x._s/x._n:0):x._s}));
+    g.sort((a,b)=>b.value-a.value);if(q.limit)g=g.slice(0,q.limit);return{grouped:true,labels:g.map(x=>x.label),values:g.map(x=>Math.round(x.value*100)/100)};}
+  return{grouped:false,rows:r};}
+
+/* ============ VIEWS ============ */
+function vOverview(){const o=OVER,m=document.getElementById('main');const tk=o&&o.tokens,pv=o&&o.provenance;
+  m.innerHTML=shell('Overview','Live monitoring across all your AI coding platforms.')+`
+  <div class="kpis">
+   ${kpi(o?o.sessions:'–','Sessions',o&&o.bySource?Object.entries(o.bySource).map(([k,v])=>k+' '+v).join(' · '):'')}
+   ${kpi(o&&o.live!=null?`<span style="color:var(--green)">${o.live}</span>`:'–','Live now')}
+   ${kpi(o?o.subagents:'–','Sub-agents')}${kpi(o?fmtK(o.toolCalls):'–','Tool calls')}
+   ${kpi(tk?fmtK(tk.inTotal):'–','Tokens in')}${kpi(tk?fmtK(tk.out):'–','Tokens out ↑')}
+   ${kpi(tk?(tk.cacheHit*100).toFixed(0)+'%':'–','Cache hit')}${kpi(pv?(pv.extPct*100).toFixed(0)+'%':'–','External data')}</div>
+   ${pv?`<div class="card" style="margin-bottom:14px"><h3>Data provenance <span class="tag">click a category to drill into contributors</span></h3><div id="provbar"></div></div>`:''}
+   <div class="grid g3"><div class="card"><h3>Token usage <span class="tag">in vs out / day</span></h3><div class="chartbox"><canvas id="cTok"></canvas></div></div>
+   <div class="card"><h3>⚡ Optimization ${o&&o.pro?'<span class="chip llm" style="margin-left:auto">Pro</span>':'<span class="tag">basic</span>'}</h3><div id="sugg"></div></div></div>
+   <div class="card" style="margin-top:14px"><h3>Recent sessions <span class="tag">click to inspect</span></h3><div class="tbl-wrap" id="recent"></div></div>`;
+  if(!o)return;
+  if(pv)provBar('provbar',pv,o.provContributors);
+  const td=o.tokensByDay||[];mkChart('cTok',(CONFIG.theme,'bar'),td.map(d=>d.date.slice(5)),[
+    {label:'in',data:td.map(d=>d.in),...dsStyle('bar',0)},{label:'out',data:td.map(d=>d.out),...dsStyle('bar',5)}],{scales:{x:{stacked:true,ticks:{color:cssv('--mut')},grid:{color:cssv('--line')}},y:{stacked:true,ticks:{color:cssv('--mut')},grid:{color:cssv('--line')}}}});
+  document.getElementById('sugg').innerHTML=(o.suggestions||[]).map(s=>`<div class="list"><div class="it"><span class="chip ${s.level==='high'?'llm':s.level==='med'?'web':'loc'}">${esc(s.level)}</span><div>${esc(s.text)}${s.savesMonthlyUsd?` <b style="color:var(--green)">~$${s.savesMonthlyUsd}/mo</b>`:''}</div></div></div>`).join('')||'<p class="dim">No suggestions.</p>';
+  tableInto('recent',['project','source','lastTs','messages','toolCalls','tokensTotal','durationSec'],(o.recent||[]).map(r=>({...r,lastTs:r.lastTs})),{lastTs:v=>ago(v),tokensTotal:v=>fmtK(v),durationSec:v=>fmtDur(v),source:v=>`<span class="chip src">${esc(v)}</span>`},r=>openSession(r.file));}
+
+function provBar(id,pv,contrib){const el=document.getElementById(id);if(!el)return;const ks=['local','mcp','web','llm'];const tot=ks.reduce((a,k)=>a+(+pv[k]||0),0)||1;
+  el.innerHTML=`<div class="provbar">${ks.map(k=>`<div title="${PROV[k][2]} ${pv[k]||0}" style="width:${(pv[k]||0)/tot*100}%;background:${PROV[k][1]}"></div>`).join('')}</div>
+  <div class="provleg">${ks.map(k=>`<b onclick='drillProv(${JSON.stringify(k)})'><span class="dotc" style="background:${PROV[k][1]}"></span>${PROV[k][2]} <span class="muted">${Math.round((pv[k]||0)/tot*100)}% (${pv[k]||0})</span></b>`).join('')}</div>`;
+  el._contrib=contrib;window._contrib=contrib;}
+function drillProv(k){const c=(window._contrib||{})[k]||[];openDrawer(PROV[k][2]+' — contributors',
+  c.length?`<div class="list">${c.map(x=>`<div class="it"><span class="chip ${k}">${k}</span><span class="nm">${esc(x.name)}</span> ${x.subtype?`<span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span>`:''}<span class="rt">${fmtK(x.count)} calls</span></div>`).join('')}</div>`
+  :'<p class="dim">No contributors in this category.</p>');}
+
+function vClaude(){const m=document.getElementById('main');const cl=SESS.filter(s=>s.source==='claude-code'||s.source==='cowork');
+  const tot=cl.reduce((a,s)=>a+(+s.tokensTotal||0),0),tools=cl.reduce((a,s)=>a+(+s.toolCalls||0),0),subs=cl.reduce((a,s)=>a+(+s.subagentFiles||0),0),live=cl.filter(s=>s.live).length;
+  const byp={};cl.forEach(s=>byp[s.source]=(byp[s.source]||0)+1);
+  m.innerHTML=shell('Claude','Claude Code + Cowork sessions on this machine.')+`
+   <div class="kpis">${kpi(cl.length,'Sessions',Object.entries(byp).map(([k,v])=>k+' '+v).join(' · '))}${kpi(`<span style="color:var(--green)">${live}</span>`,'Live')}${kpi(fmtK(subs),'Sub-agents')}${kpi(fmtK(tools),'Tool calls')}${kpi(fmtK(tot),'Total tokens')}</div>
+   <div class="card"><h3>Sessions <span class="tag">Claude Code &amp; Cowork · click to inspect</span></h3><div class="tbl-wrap" id="cltab"></div></div>`;
+  tableInto('cltab',['project','source','lastTs','messages','toolCalls','subagentFiles','tokensInTotal','tokensOut','extPct','durationSec'],cl,
+    {lastTs:ago,source:v=>`<span class="chip src">${esc(v)}</span>`,tokensInTotal:fmtK,tokensOut:fmtK,extPct:v=>Math.round((v||0)*100)+'%',durationSec:fmtDur},r=>openSession(r.file));}
+
+async function vCursor(){const m=document.getElementById('main');m.innerHTML=shell('Cursor','Rich activity parsed read-only from Cursor’s local store (old + live).')+'<div id="cur" class="dim">reading Cursor state…</div>';
+  let c;try{c=await api('/api/cursor');}catch(e){document.getElementById('cur').innerHTML='Cursor reader unavailable.';return;}CURSOR=c;
+  if(c.exists===false){document.getElementById('cur').innerHTML=`<div class="empty">No Cursor data found.<br><span class="dim">${esc(c.note||c.error||'')}</span></div>`;return;}
+  const conv=c.conversations||[];
+  document.getElementById('cur').innerHTML=`<div class="kpis">${kpi(c.dbCount||0,'Workspaces')}${kpi(fmtK(c.composers||0),'Conversations')}${kpi(fmtK(c.messages||0),'Messages')}${kpi(`<span style="color:var(--green)">${c.live||0}</span>`,'Live')}${kpi((c.models||[]).length||'–','Models seen')}</div>
+   ${c.models&&c.models.length?`<div class="card" style="margin-bottom:14px"><h3>Models</h3>${c.models.map(x=>`<span class="chip mcp" style="margin:2px">${esc(x)}</span>`).join(' ')}</div>`:''}
+   <div class="card"><h3>Conversations <span class="tag">${esc(c.note||'')}</span></h3><div class="tbl-wrap" id="curtab"></div></div>`;
+  tableInto('curtab',['title','workspace','model','messageCount','tools','files','agentic','lastTs'],conv,
+    {workspace:v=>`<span class="dim">${esc((v||'').split('/').slice(-2).join('/'))}</span>`,model:v=>v?`<span class="chip mcp">${esc(v)}</span>`:'<span class="dim">—</span>',
+     tools:v=>(v||[]).slice(0,3).map(t=>`<span class="chip web">${esc(t)}</span>`).join(' ')+((v||[]).length>3?` +${v.length-3}`:''),files:v=>`<span class="muted">${(v||[]).length}</span>`,
+     agentic:v=>v?'<span class="chip loc">agent</span>':'<span class="chip unk">chat</span>',lastTs:ago},r=>openCursorConv(r));}
+function openCursorConv(r){openDrawer(esc(r.title),`<div class="row" style="margin-bottom:10px">${r.agentic?'<span class="chip loc">agent</span>':'<span class="chip unk">chat</span>'} ${r.live?'<span class="chip live">live</span>':''} <span class="dim">${esc(r.workspace)}</span></div>
+  <div class="kpis">${kpi(r.messageCount,'Messages')}${kpi((r.tools||[]).length,'Tools')}${kpi((r.files||[]).length,'Files')}${kpi(r.model||'—','Model')}</div>
+  ${r.tools&&r.tools.length?`<div class="card" style="margin-bottom:10px"><h3>Tools used</h3>${r.tools.map(t=>`<span class="chip web" style="margin:2px">${esc(t)}</span>`).join(' ')}</div>`:''}
+  ${r.files&&r.files.length?`<div class="card"><h3>Files referenced</h3>${r.files.map(f=>`<div class="muted" style="font-size:12px">${esc(f)}</div>`).join('')}</div>`:''}`);}
+
+async function vPlatforms(){const m=document.getElementById('main');const t=TOPO||(TOPO=await api('/api/topology').catch(()=>({})));
+  const bySource=(OVER&&OVER.bySource)||{};const known={'claude-code':'Claude Code','cowork':'Claude Cowork','cursor':'Cursor'};
+  const cards=(t.platforms||Object.keys(bySource)).map(p=>{const n=bySource[p]||0;return `<div class="card"><h3>${esc(known[p]||p)} <span class="tag">${esc(p)}</span></h3><div class="kpis" style="margin:0">${kpi(n,'Sessions')}</div></div>`;}).join('');
+  m.innerHTML=shell('Platforms','Every AI coding platform AgentLens is watching — fully configurable.','<button class="btn" onclick="cfgPlatforms()">⚙ Configure sources</button>')+`
+   <div class="grid g2">${cards||'<div class="empty">No platforms detected yet.</div>'}</div>
+   <div class="card" style="margin-top:14px"><h3>Add another platform <span class="tag">codex-style tools</span></h3>
+   <p class="muted">AgentLens reads transcripts from configurable source roots. Point it at any other agent/codex platform by setting environment variables before the service starts:</p>
+   <pre style="background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px;overflow:auto;font-size:12px;color:var(--cyan)">AGENTLENS_CLAUDE_PROJECTS=~/.claude/projects
+AGENTLENS_COWORK_ROOT=~/Library/Application Support/Claude/local-agent-mode-sessions
+AGENTLENS_CURSOR_USER=~/Library/Application Support/Cursor/User
+# extra platform (JSONL transcripts):
+AGENTLENS_EXTRA_SOURCES=codex:~/.codex/sessions,windsurf:~/.windsurf/history</pre></div>`;}
+function cfgPlatforms(){openDrawer('Configure sources','<p class="muted">Source roots are set via environment variables read at service start (see the panel). A future release will let you edit these here and persist them to your local config.json.</p>');}
+
+async function vProv(){const m=document.getElementById('main');const o=OVER;if(!o){m.innerHTML=shell('Provenance','')+'<div class="empty">Start the server.</div>';return;}
+  const pv=o.provenance,contrib=o.provContributors||{};const ks=['local','mcp','web','llm'];
+  m.innerHTML=shell('Data provenance','Where every tool call’s data came from — drill into the contributors.')+`
+   <div class="card" style="margin-bottom:14px"><h3>Mix</h3><div id="pb"></div></div>
+   <div class="grid g2"><div class="card"><h3>Breakdown</h3><div class="chartbox sm"><canvas id="cProv"></canvas></div></div>
+   <div class="card"><h3>Top contributors</h3><div class="list" id="contriball"></div></div></div>`;
+  provBar('pb',pv,contrib);
+  mkChart('cProv','doughnut',ks.map(k=>PROV[k][2]),[{data:ks.map(k=>pv[k]||0),backgroundColor:ks.map(k=>PROV[k][1]),borderColor:cssv('--panel'),borderWidth:2}],{plugins:{legend:{display:true,position:'right',labels:{color:cssv('--mut'),font:{size:10},boxWidth:10}}}});
+  const all=[];ks.forEach(k=>(contrib[k]||[]).forEach(x=>all.push({...x,cat:k})));all.sort((a,b)=>b.count-a.count);
+  document.getElementById('contriball').innerHTML=all.slice(0,14).map(x=>`<div class="it"><span class="chip ${x.cat}">${x.cat}</span><span class="nm">${esc(x.name)}</span>${x.subtype?`<span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span>`:''}<span class="rt">${fmtK(x.count)}</span></div>`).join('')||'<p class="dim">No data.</p>';}
+
+async function vTopo(){const m=document.getElementById('main');const t=TOPO||(TOPO=await api('/api/topology').catch(()=>({})));
+  const sec=(title,items,fmt)=>`<div class="card" style="margin-bottom:14px"><h3>${title} <span class="tag">${items.length}</span></h3>${items.length?`<div class="list">${items.map(fmt).join('')}</div>`:'<p class="dim">none detected — add via your ~/.claude or config.json</p>'}</div>`;
+  m.innerHTML=shell('Topology','Your installed capabilities — reflected live from ~/.claude and your sessions (configurable).')+`
+   ${sec('🔌 MCP connectors',(t.mcp||[]),x=>`<div class="it"><span class="chip mcp">mcp</span><span class="nm">${esc(x.name)}</span><span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span></div>`)}
+   ${sec('🧩 Skills',(t.skills||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
+   ${sec('🤖 Agents',(t.agents||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
+   ${sec('⌘ Commands',(t.commands||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
+   ${sec('📦 Projects',(t.projects||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}`;}
+
+function vUltra(){const m=document.getElementById('main');const sl=(SESS||[]).filter(s=>typeof s.toolCalls==='number');
+  const strat={fan:0,tourn:0,loop:0,adv:0,classify:0};const has=(s,re)=>Object.keys(s.byTool||{}).some(k=>re.test(k));
+  sl.forEach(s=>{const subs=Math.max(+s.subagentFiles||0,+s.subagentSpawns||0),t=+s.toolCalls||0;if(subs>=2)strat.fan++;if(subs>=3)strat.tourn++;if(t>=25||has(s,/Todo|TaskCreate/))strat.loop++;if(has(s,/test|review|verify|security|lint/i))strat.adv++;if(has(s,/TaskCreate|Todo/))strat.classify++;});
+  const D=[['Fan-out','Parallel sub-agents, each owns a slice'],['Classify-and-act','Triage into buckets, route each'],['Adversarial','Red-team every builder pass'],['Loop-until-done','Iterate build→verify→fix'],['Tournament','Generate N, score, advance winner']];
+  const mx=Math.max(1,...Object.values(strat));const lab={fan:'fan-out',tourn:'tournament',loop:'loop-until-done',adv:'adversarial',classify:'classify-and-act'};
+  m.innerHTML=shell('ULTRACODE','How the execution doctrine shows up in your real sessions.')+`
+   <div class="grid g2"><div class="card"><h3>Doctrine</h3><div class="list">${D.map(d=>`<div class="it"><div><div class="nm">${d[0]}</div><div class="dim" style="font-size:12px">${d[1]}</div></div></div>`).join('')}</div></div>
+   <div class="card"><h3>Strategy usage <span class="tag">${sl.length} sessions</span></h3>${Object.entries(lab).map(([k,v],i)=>`<div class="row" style="margin-bottom:7px"><span style="width:130px;color:${PAL[i]}">● ${v}</span><div style="flex:1;background:var(--panel2);border-radius:5px;overflow:hidden"><div style="height:12px;width:${strat[k]/mx*100}%;background:${PAL[i]}"></div></div><span class="muted" style="width:32px;text-align:right">${strat[k]}</span></div>`).join('')}</div></div>`;}
+
+/* ---------- Explore (dataset explorer) ---------- */
+let EXP={name:'sessions',q:'',sort:null,dir:1,hidden:{}};
+async function vExplore(){const m=document.getElementById('main');const idx=await api('/api/datasets');
+  m.innerHTML=shell('Explore data','Browse the normalized datasets — search, sort, pick columns.',
+   `<select id="dsSel">${idx.datasets.map(d=>`<option value="${d.name}" ${d.name===EXP.name?'selected':''}>${esc(d.label)}</option>`).join('')}</select> <input type="search" id="dsQ" placeholder="search rows…" value="${esc(EXP.q)}">`)+
+   `<div class="card"><h3 id="dsTitle"></h3><div class="row" id="colpick" style="margin-bottom:9px"></div><div class="tbl-wrap" id="dsTab"></div></div>`;
+  document.getElementById('dsSel').onchange=e=>{EXP.name=e.target.value;EXP.sort=null;EXP.hidden={};drawExplore();};
+  document.getElementById('dsQ').oninput=e=>{EXP.q=e.target.value;drawExplore();};drawExplore();}
+async function drawExplore(){const d=await ds(EXP.name);const cols=d.columns||[];document.getElementById('dsTitle').innerHTML=`${esc(EXP.name)} <span class="tag">${(d.rows||[]).length} rows${d.error?' · '+esc(d.error):''}</span>`;
+  document.getElementById('colpick').innerHTML=cols.map(c=>`<label class="chip ${EXP.hidden[c]?'unk':'src'}" style="cursor:pointer"><input type="checkbox" ${EXP.hidden[c]?'':'checked'} onchange="EXP.hidden[${JSON.stringify(c)}]=!this.checked;drawExplore()" style="display:none">${esc(c)}</label>`).join(' ');
+  let rows=(d.rows||[]);if(EXP.q){const q=EXP.q.toLowerCase();rows=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q));}
+  if(EXP.sort){rows=rows.slice().sort((a,b)=>{const x=a[EXP.sort],y=b[EXP.sort];const nx=+x,ny=+y;if(!isNaN(nx)&&!isNaN(ny))return(nx-ny)*EXP.dir;return String(x).localeCompare(String(y))*EXP.dir;});}
+  const vc=cols.filter(c=>!EXP.hidden[c]);
+  document.getElementById('dsTab').innerHTML=`<table><thead><tr>${vc.map(c=>`<th onclick="EXP.sort=${JSON.stringify(c)};EXP.dir=EXP.sort===${JSON.stringify(c)}&&EXP.dir===1?-1:1;drawExplore()">${esc(c)}${EXP.sort===c?(EXP.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,400).map(r=>`<tr>${vc.map(c=>{let v=r[c];if(Array.isArray(v))v=v.length;const num=typeof v==='number';return `<td class="${num?'num':''}">${esc(num?(Math.abs(v)>=1000?fmtK(v):v):v)}</td>`;}).join('')}</tr>`).join('')}</tbody></table>`;}
+
+/* ---------- Query builder → widgets ---------- */
+let QB={name:'sessions',filters:[{col:'',op:'=',val:''}],groupBy:'',agg:'count',aggCol:'',chart:'bar',limit:12,title:''};
+async function vQuery(){const m=document.getElementById('main');const idx=await api('/api/datasets');const d=await ds(QB.name);const cols=d.columns||[];
+  m.innerHTML=shell('Query builder','Query any dataset and turn the result into a dashboard widget.')+`
+   <div class="qb"><div class="card"><h3>Query</h3>
+     <div class="muted" style="font-size:11px">Dataset</div><select id="qDs" style="width:100%;margin:3px 0 10px">${idx.datasets.map(x=>`<option value="${x.name}" ${x.name===QB.name?'selected':''}>${esc(x.label)}</option>`).join('')}</select>
+     <div class="muted" style="font-size:11px">Filters</div><div id="qFilters"></div><button class="btn" onclick="QB.filters.push({col:'',op:'=',val:''});vQuery()" style="margin:4px 0 10px">+ filter</button>
+     <div class="muted" style="font-size:11px">Group by</div><select id="qGroup" style="width:100%;margin:3px 0 8px"><option value="">(none — raw rows)</option>${cols.map(c=>`<option ${c===QB.groupBy?'selected':''}>${esc(c)}</option>`).join('')}</select>
+     <div class="row"><select id="qAgg" style="flex:1"><option value="count" ${QB.agg==='count'?'selected':''}>count</option><option value="sum" ${QB.agg==='sum'?'selected':''}>sum</option><option value="avg" ${QB.agg==='avg'?'selected':''}>avg</option></select>
+       <select id="qAggCol" style="flex:1"><option value="">of…</option>${cols.map(c=>`<option ${c===QB.aggCol?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+     <div class="muted" style="font-size:11px;margin-top:10px">Chart</div><select id="qChart" style="width:100%;margin:3px 0 8px">${['bar','line','area','doughnut','table','heatmap'].map(c=>`<option ${c===QB.chart?'selected':''}>${c}</option>`).join('')}</select>
+     <input id="qTitle" placeholder="widget title" style="width:100%;margin-bottom:10px" value="${esc(QB.title)}">
+     <button class="btn pri" onclick="saveWidget()" style="width:100%">＋ Save as widget</button></div>
+   <div class="card"><h3>Preview</h3><div id="qPrev" style="min-height:260px"></div></div></div>`;
+  const sync=()=>{QB.name=qDs.value;QB.groupBy=qGroup.value;QB.agg=qAgg.value;QB.aggCol=qAggCol.value;QB.chart=qChart.value;QB.title=qTitle.value;};
+  ['qDs','qGroup','qAgg','qAggCol','qChart'].forEach(id=>document.getElementById(id).onchange=async()=>{const changed=document.getElementById('qDs').value!==QB.name;sync();if(changed){DSCACHE={};vQuery();}else qPreview();});
+  document.getElementById('qTitle').oninput=()=>{QB.title=qTitle.value;};
+  document.getElementById('qFilters').innerHTML=QB.filters.map((f,i)=>`<div class="filterrow"><select onchange="QB.filters[${i}].col=this.value;qPreview()"><option value="">col…</option>${cols.map(c=>`<option ${c===f.col?'selected':''}>${esc(c)}</option>`).join('')}</select>
+     <select onchange="QB.filters[${i}].op=this.value;qPreview()">${['=','!=','>','<','contains'].map(o=>`<option ${o===f.op?'selected':''}>${o}</option>`).join('')}</select>
+     <input value="${esc(f.val)}" placeholder="value" oninput="QB.filters[${i}].val=this.value;qPreview()"><span class="icobtn" onclick="QB.filters.splice(${i},1);vQuery()">✕</span></div>`).join('');
+  qPreview();}
+async function qPreview(){const host=document.getElementById('qPrev');if(!host)return;const d=await ds(QB.name);const res=runQuery(d.rows||[],QB);
+  if(QB.chart==='table'||!QB.groupBy){const rows=res.grouped?res.labels.map((l,i)=>({key:l,value:res.values[i]})):res.rows.slice(0,200);const cols=res.grouped?['key','value']:(d.columns||[]);
+    host.innerHTML=`<div class="tbl-wrap" style="max-height:300px"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>{let v=r[c];if(Array.isArray(v))v=v.length;return `<td>${esc(v)}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div>`;return;}
+  if(QB.chart==='heatmap'){host.innerHTML=heatmapHTML(res.labels,res.values);return;}
+  host.innerHTML='<div class="chartbox"><canvas id="qcv"></canvas></div>';
+  mkChart('qcv',QB.chart,res.labels,[{label:QB.agg+(QB.aggCol?' '+QB.aggCol:''),data:res.values,...dsStyle(QB.chart,0)}]);}
+function heatmapHTML(labels,values){const mx=Math.max(1,...values);const cols=Math.min(12,labels.length)||1;
+  return `<div class="hm" style="grid-template-columns:repeat(${cols},1fr)">${values.map((v,i)=>`<div class="cell" title="${esc(labels[i])}: ${v}" style="background:rgba(77,124,254,${.15+.85*v/mx})"></div>`).join('')}</div><div class="dim" style="margin-top:8px;font-size:11px">${labels.length} groups · intensity = value</div>`;}
+function saveWidget(){if(!QB.groupBy&&QB.chart!=='table'){alert('Pick a "group by" (or use the table chart) to build a widget.');return;}
+  const w={id:'w'+Date.now(),title:QB.title||(QB.name+' · '+(QB.groupBy||'rows')),dataset:QB.name,query:{filters:QB.filters.filter(f=>f.col),groupBy:QB.groupBy,agg:QB.agg,aggCol:QB.aggCol,limit:QB.limit},chart:QB.chart,size:'w6'};
+  let dash=(CONFIG.dashboards&&CONFIG.dashboards[0]);if(!dash){dash={id:'default',name:'My dashboard',widgets:[]};CONFIG.dashboards=[dash];}
+  dash.widgets.push(w);post('/api/config',CONFIG);document.querySelector('.nav[data-v=dashboards]').click();}
+
+/* ---------- Dashboards (customizable widget grid) ---------- */
+async function vDash(){const m=document.getElementById('main');if(!CONFIG.dashboards||!CONFIG.dashboards.length)CONFIG.dashboards=[{id:'default',name:'My dashboard',widgets:[]}];
+  const dash=CONFIG.dashboards[0];
+  m.innerHTML=shell(esc(dash.name||'Dashboards'),'Your customizable monitoring board — add, resize, reorder, remove.',
+    '<button class="btn" onclick="document.querySelector(\'.nav[data-v=query]\').click()">＋ Add widget</button> <button class="btn" onclick="resetDash()">Reset</button>')+
+   (dash.widgets.length?`<div class="wgrid" id="wgrid"></div>`:`<div class="empty">No widgets yet. Use the <b>Query builder</b> to create your first widget.<br><button class="btn pri" style="margin-top:10px" onclick="document.querySelector('.nav[data-v=query]').click()">Open Query builder</button></div>`);
+  const grid=document.getElementById('wgrid');if(!grid)return;
+  for(const[i,w]of dash.widgets.entries()){const el=document.createElement('div');el.className='widget '+(w.size||'w6');el.draggable=true;el.dataset.i=i;
+    el.innerHTML=`<div class="wh">${esc(w.title)}<div class="wx"><span class="icobtn" onclick="cycleSize(${i})" title="resize">⤢</span><span class="icobtn" onclick="moveW(${i},-1)">↑</span><span class="icobtn" onclick="moveW(${i},1)">↓</span><span class="icobtn" onclick="delW(${i})">✕</span></div></div><div id="wb${i}" class="wbody"></div>`;
+    el.ondragstart=e=>e.dataTransfer.setData('i',i);el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();reorder(+e.dataTransfer.getData('i'),i);};
+    grid.appendChild(el);renderWidget(w,'wb'+i);}}
+async function renderWidget(w,host){const d=await ds(w.dataset);const res=runQuery(d.rows||[],w.query);const el=document.getElementById(host);if(!el)return;
+  if(w.chart==='table'){const rows=res.grouped?res.labels.map((l,i)=>({key:l,value:res.values[i]})):(res.rows||[]).slice(0,80);const cols=res.grouped?['key','value']:(d.columns||[]).slice(0,5);
+    el.innerHTML=`<div class="tbl-wrap" style="max-height:220px"><table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>{let v=r[c];if(Array.isArray(v))v=v.length;return`<td>${esc(v)}</td>`;}).join('')}</tr>`).join('')}</tbody></table></div>`;return;}
+  if(w.chart==='heatmap'){el.innerHTML=heatmapHTML(res.labels||[],res.values||[]);return;}
+  el.innerHTML=`<div class="chartbox sm"><canvas id="${host}c"></canvas></div>`;mkChart(host+'c',w.chart,res.labels||[],[{label:w.query.agg,data:res.values||[],...dsStyle(w.chart,0)}]);}
+const SIZES=['w4','w6','w8','w12'];
+function cycleSize(i){const d=CONFIG.dashboards[0];const w=d.widgets[i];w.size=SIZES[(SIZES.indexOf(w.size||'w6')+1)%SIZES.length];persist();vDash();}
+function moveW(i,dir){const a=CONFIG.dashboards[0].widgets;const j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];persist();vDash();}
+function reorder(from,to){const a=CONFIG.dashboards[0].widgets;const[x]=a.splice(from,1);a.splice(to,0,x);persist();vDash();}
+function delW(i){CONFIG.dashboards[0].widgets.splice(i,1);persist();vDash();}
+function resetDash(){if(confirm('Remove all widgets?')){CONFIG.dashboards=[{id:'default',name:'My dashboard',widgets:[]}];persist();vDash();}}
+function persist(){post('/api/config',CONFIG);}
+
+function vFeed(){const m=document.getElementById('main');m.innerHTML=shell('AI Feed','Latest in AI — populated by your scheduled research loops.')+
+  `<div class="card feed">${FEED.length?FEED.map(i=>`<div class="item"><div class="row"><span class="chip mcp">${esc(i.provider)}</span><span class="chip ${i.impact==='high'?'llm':i.impact==='medium'?'web':'loc'}">${esc(i.impact)}</span> <b>${esc(i.title)}</b><span class="dim" style="margin-left:auto">${esc(i.date||'')}</span></div><div class="muted" style="margin-top:4px">${esc(i.summary||'')} ${i.url?`· <a href="${esc(i.url)}" target="_blank">source ↗</a>`:''}</div></div>`).join(''):'<div class="empty">No feed items yet — the daily loop will populate this.</div>'}</div>`;}
+
+/* ---------- shared table + drawer + session ---------- */
+function tableInto(host,cols,rows,fmt,onclick){const el=document.getElementById(host);if(!el)return;fmt=fmt||{};
+  el.innerHTML=`<table><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${(rows||[]).map((r,i)=>`<tr ${onclick?`style="cursor:pointer" onclick="__rowclick('${host}',${i})"`:''}>${cols.map(c=>{let v=r[c];const f=fmt[c];const out=f?f(v,r):(Array.isArray(v)?v.length:esc(v));const num=typeof v==='number'&&!f;return `<td class="${num?'num':''}">${out}</td>`;}).join('')}</tr>`).join('')||`<tr><td colspan="${cols.length}" class="dim" style="padding:16px">No rows.</td></tr>`}</tbody></table>`;
+  el._rows=rows;el._onclick=onclick;}
+function __rowclick(host,i){const el=document.getElementById(host);if(el&&el._onclick)el._onclick(el._rows[i]);}
+function openDrawer(title,html){document.getElementById('dtitle').innerHTML=title;document.getElementById('dbody').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('dbg').style.display='block';}
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('dbg').style.display='none';}
-function openProvenance(cat){
-  const rows=(SESSIONS||[]).map(s=>({s,n:((s.prov||{})[cat])||0})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,60);
-  document.getElementById('drawer').classList.add('open');document.getElementById('dbg').style.display='block';
-  document.getElementById('d-title').innerHTML=`Data provenance: <span style="color:${CAT[cat][0]}">${CAT[cat][2]}</span>`;
-  const total=rows.reduce((a,x)=>a+x.n,0);
-  const desc={internal:'Local machine — file reads/writes, local search, local shell. This data never left your device.',firm:'Firm / internal MCP connectors (Jira, marketplaces, internal services).',web:'Public web — WebSearch / WebFetch, browser, network shell, web MCPs.',llm:'Calls to external LLMs (other models).'}[cat];
-  document.getElementById('d-body').innerHTML=`
-    <div class="kpis" style="grid-template-columns:repeat(2,1fr)">${kpi(total,CAT[cat][2]+' tool calls')}${kpi(rows.length,'sessions')}</div>
-    <p class="muted" style="margin:2px 0 12px">${desc} Click a session for the exact tools, skills, agents and tokens involved (the timeline tags every call).</p>
-    ${rows.map(({s,n})=>`<div class="row" onclick="openSession('${encodeURIComponent(s.file)}')"><div style="flex:none;width:220px"><div class="rn">${esc(s.project)} ${s.live?'<span style=\"color:#19c37d\">●</span>':''}</div><div class="rd">${esc(s.source||'')}${(cat!=='internal'&&s.mcpServers&&s.mcpServers.length)?' · MCP: '+s.mcpServers.map(esc).join(', '):''}${(s.skills&&s.skills.length)?' · skills: '+s.skills.map(esc).join(', '):''}</div></div><div style="margin-left:auto;text-align:right"><div class="rn" style="color:${CAT[cat][0]}">${n}</div><div class="rd">${Math.round((s.extPct||0)*100)}% ext</div></div></div>`).join('')||'<p class="muted">No sessions used this category.</p>'}`;
-}
+async function openSession(file){openDrawer('loading…','<p class="dim">parsing transcript…</p>');let d;try{d=await api('/api/session?file='+encodeURIComponent(file));}catch(e){openDrawer('Error','<p class="dim">Could not load.</p>');return;}
+  const mm=d.meta;openDrawer(`Session ${esc((mm.sessionId||'').slice(0,8))} <span class="chip src">${esc(mm.source||'')}</span>`,
+   `<div class="kpis">${kpi(mm.events,'Events')}${kpi(mm.toolCalls,'Tools')}${kpi(mm.subagentFiles,'Sub-agents')}${kpi(fmtK(mm.tokensTotal),'Tokens')}${kpi((mm.cacheHit*100||0).toFixed(0)+'%','Cache')}</div>
+   <div class="card" style="margin-bottom:10px"><h3>Tools</h3><div class="list">${(d.tools||[]).map(t=>`<div class="it"><span class="chip ${t.origin}">${esc(t.origin)}</span><span class="nm">${esc(t.name)}</span><span class="rt">${t.count}× · ${fmtK(t.tokens)} tok</span></div>`).join('')}</div></div>
+   <div class="card"><h3>Timeline <span class="tag">${(d.timeline||[]).length} events</span></h3>${(d.timeline||[]).slice(0,120).map(e=>`<div class="row" style="border-bottom:1px solid var(--line);padding:5px 0;font-size:12px"><span class="dim" style="width:60px">${esc((e.ts||'').slice(11,19))}</span><span class="chip ${e.origin||'unk'}" style="width:54px;text-align:center">${esc(e.kind==='tool_use'?e.tool:e.kind)}</span><span class="muted" style="flex:1">${esc(e.summary||'')}</span>${e.status?`<span class="chip ${e.status==='ok'?'loc':'ext'}">${e.status}</span>`:''}</div>`).join('')}</div>`);}
 
-/* ---------------- knowledge graph (collapsible, lazy-loaded) ---------------- */
-const NTYPE={root:{c:'#5b8cff',i:'🧠'},project:{c:'#22d3ee',i:'📦'},session:{c:'#a78bfa',i:'🗂️'},subagent:{c:'#f472b6',i:'🤖'},tool:{c:'#ffb020',i:'🔧'},call:{c:'#3fb950',i:'•'}};
-const GT={map:{},roots:[]};
-async function vGraph(){
-  const m=document.getElementById('main');
-  m.innerHTML=`<h1>Workflow Brain</h1><p class="sub">A live force graph of your work. Orbs = workflows, sessions, and repeated task-signatures. <b>Heat</b> = recent activity (hot) vs dormant (cool/dim). <b>Hub size</b> = how often the exact same thing is done. Drag orbs, scroll to zoom, click to drill in.</p>
-   <div class="controls">
-     <label class="muted">Color&nbsp;<select id="bColor"><option value="heat">Heat (recency)</option><option value="prov">Provenance (int/ext)</option><option value="type">Entity type</option></select></label>
-     <label class="muted">Repeats&nbsp;≥&nbsp;<select id="bRep"><option value="1">1 (all)</option><option selected value="2">2</option><option value="3">3</option><option value="5">5</option></select></label>
-     <label class="muted">Sessions&nbsp;<select id="bCap"><option>20</option><option selected>30</option><option>50</option><option>80</option></select></label>
-     <button class="btn" onclick="BRAIN.reload()">↻ Re-pulse</button>
-     <span class="muted" id="bstat"></span>
-   </div>
-   <div class="card" style="padding:0;position:relative">
-     <div id="brainStage" class="vizstage" style="height:74vh;border-radius:13px;overflow:hidden">${LIVE?'':'<p class="muted" style="padding:18px">Start the server to render the live brain.</p>'}</div>
-     <div id="brainLegend" style="position:absolute;left:14px;bottom:12px;font-size:11px;color:#8493a8;background:#0a0e16cc;border:1px solid #1e2a3d;border-radius:9px;padding:8px 10px"></div>
-     <div id="brainTip" style="position:absolute;pointer-events:none;display:none;background:#0d1626;border:1px solid #2a3850;border-radius:8px;padding:7px 9px;font-size:11.5px;max-width:330px;color:#e8eef7;box-shadow:0 6px 20px #000a;z-index:5"></div>
-   </div>`;
-  const bc=document.getElementById('bColor');bc.value=BRAIN.colorMode;bc.onchange=e=>{BRAIN.colorMode=e.target.value;BRAIN.paint();};
-  document.getElementById('bRep').value=String(BRAIN.minRep);document.getElementById('bRep').onchange=e=>{BRAIN.minRep=+e.target.value;BRAIN.build();};
-  document.getElementById('bCap').value=String(BRAIN.cap);document.getElementById('bCap').onchange=e=>{BRAIN.cap=+e.target.value;BRAIN.reload();};
-  if(LIVE){
-    if(typeof d3==='undefined'){document.getElementById('brainStage').innerHTML='<p class="muted" style="padding:18px">Graph engine (D3) didn\'t load — check internet access, then ↻ Re-pulse.</p>';return;}
-    BRAIN.reload();
-  }
-}
-GT.init=async function(){
-  try{
-    let rows=(SESSIONS&&SESSIONS.length)?SESSIONS:[];
-    if(!rows.length){try{rows=await api('/api/sessions');}catch(e){rows=[];}}
-    this.map={};this.roots=['root'];
-    this.map['root']={id:'root',type:'root',label:'AgentLens',children:[],expanded:true,loaded:true,parent:null,meta:{}};
-    const projOrder=[],projSeen={};
-    rows.forEach(r=>{
-      const p=r.project||'(unknown)',pid='p:'+p;
-      if(!projSeen[pid]){projSeen[pid]=1;projOrder.push(pid);
-        this.map[pid]={id:pid,type:'project',label:p,rel:'workflow',parent:'root',children:[],expanded:false,loaded:true,meta:{}};
-        this.map['root'].children.push(pid);}
-      const sid='s:'+r.file;
-      this.map[sid]={id:sid,type:'session',label:(r.sessionId||'').slice(0,8)||'session',file:r.file,rel:'has session',parent:pid,children:[],expanded:false,loaded:false,
-        meta:{tools:+r.toolCalls||0,subagents:+r.subagentFiles||0,tokens:(+r.tokensInTotal||0)+(+r.tokensOut||0)}};
-      this.map[pid].children.push(sid);
-    });
-    const st=document.getElementById('gstat');if(st)st.textContent=`${projOrder.length} workflows · ${rows.length} sessions`;
-    if(!rows.length){const c=document.getElementById('graphCanvas');if(c)c.innerHTML='<p class="muted">No sessions found yet. If you have work in ~/.claude/projects, restart the server: <code>bash ~/claude-projects/agentlens/platform/install-service.sh</code></p>';return;}
-    this.render();
-  }catch(e){const c=document.getElementById('graphCanvas');if(c)c.innerHTML='<p class="muted">Could not build graph. Restart the server to load the latest code: <code>bash ~/claude-projects/agentlens/platform/install-service.sh</code></p>';}
-};
-GT.toggle=async function(id){const n=this.map[id];if(!n)return;if(!n.loaded)await this.load(n);n.expanded=!n.expanded;this.render();};
-GT.load=async function(n){
-  if(n.type==='session'||n.type==='subagent'){
-    try{const d=await api('/api/session?file='+encodeURIComponent(n.file));n.timeline=d.timeline||[];
-      (d.subagents||[]).forEach((s,idx)=>{const id=n.id+'/sub:'+idx;this.map[id]={id,type:'subagent',label:s.agentId,file:s.file,rel:'spawned',parent:n.id,children:[],expanded:false,loaded:false,meta:{tools:s.toolCalls}};n.children.push(id);});
-      (d.tools||[]).forEach(t=>{const id=n.id+'/tool:'+t.name;this.map[id]={id,type:'tool',label:t.name+' ×'+t.count,rel:'called',parent:n.id,children:[],expanded:false,loaded:true,meta:{count:t.count}};
-        (n.timeline||[]).filter(e=>e.kind==='tool_use'&&e.tool===t.name).forEach((c,ci)=>{const cid=id+'/c'+ci;this.map[cid]={id:cid,type:'call',label:c.summary||c.tool,rel:'',parent:id,children:[],expanded:false,loaded:true,status:c.status};this.map[id].children.push(cid);});
-        n.children.push(id);});
-    }catch(e){}
-  }
-  n.loaded=true;
-};
-GT.visible=function(){const out=[];const seen={};const walk=(id,depth)=>{const n=this.map[id];if(!n||seen[id])return;seen[id]=1;out.push({n,depth});if(n.expanded)n.children.forEach(c=>walk(c,depth+1));};this.roots.forEach(r=>walk(r,0));return out;};
-GT.expandProjects=function(){Object.values(this.map).forEach(n=>{if(n.type==='root'||n.type==='project')n.expanded=true;});this.render();};
-GT.collapseAll=function(){Object.values(this.map).forEach(n=>{n.expanded=(n.type==='root');});this.render();};
-GT.render=function(){
-  const list=this.visible();const rowH=34,colW=26,padL=14,padT=14;
-  const nodeW=n=>Math.min(640,Math.max(170,String(n.label).length*7+150));
-  const W=Math.max.apply(null,list.map(x=>padL+x.depth*colW+nodeW(x.n)+30).concat([700]));
-  const H=padT*2+list.length*rowH;
-  const idx={};list.forEach((x,i)=>idx[x.n.id]=i);
-  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="font:12px sans-serif">`;
-  list.forEach((x,i)=>{const n=x.n;if(n.parent!=null&&idx[n.parent]!=null){const py=padT+idx[n.parent]*rowH+rowH/2;const cy=padT+i*rowH+rowH/2;const px=padL+(x.depth-1)*colW+12;const cx=padL+x.depth*colW+2;
-     s+=`<path d="M ${px} ${py} V ${cy} H ${cx}" fill="none" stroke="#2a3850" stroke-width="1.3"/>`;
-     if(n.rel)s+=`<text x="${px+5}" y="${cy-4}" fill="#566479" font-size="9">${esc(n.rel)}</text>`;}});
-  list.forEach((x,i)=>{const n=x.n;const ty=NTYPE[n.type]||NTYPE.call;const X=padL+x.depth*colW;const Y=padT+i*rowH;const w=nodeW(n);
-     const hasKids=(n.type==='session'||n.type==='subagent')||n.children.length>0;
-     const caret=hasKids?(n.expanded?'▾':'▸'):'·';
-     let meta='';
-     if(n.type==='session')meta=` <tspan fill="#6b7a90">${(n.meta&&n.meta.tools)||0} tools · ${(n.meta&&n.meta.subagents)||0} sub · ${fmtK((n.meta&&n.meta.tokens)||0)} tok</tspan>`;
-     else if(n.type==='subagent')meta=` <tspan fill="#6b7a90">${(n.meta&&n.meta.tools)||0} tools</tspan>`;
-     const stat=(n.type==='call'&&n.status)?`<tspan fill="${n.status==='error'?'#ff5d6c':n.status==='ok'?'#3fb950':'#8493a8'}"> [${esc(n.status)}]</tspan>`:'';
-     s+=`<g style="cursor:pointer" onclick="GT.toggle('${String(n.id).replace(/'/g,"\\'")}')">
-        <rect x="${X}" y="${Y+5}" width="${w}" height="${rowH-9}" rx="7" fill="#101827" stroke="${ty.c}" stroke-opacity="0.55"/>
-        <text x="${X+9}" y="${Y+rowH/2+4}" fill="#9fb0c6">${caret}</text>
-        <text x="${X+24}" y="${Y+rowH/2+4}" fill="#e8eef7">${ty.i} <tspan fill="${ty.c}">${esc(String(n.label).slice(0,64))}</tspan>${meta}${stat}</text>`;
-     if((n.type==='session'||n.type==='subagent')&&n.file)s+=`<text x="${X+w-14}" y="${Y+rowH/2+4}" fill="#5b8cff" onclick="event.stopPropagation();openSession('${encodeURIComponent(n.file)}')">↗</text>`;
-     s+=`</g>`;});
-  s+=`</svg>`;
-  const c=document.getElementById('graphCanvas');if(c)c.innerHTML=s;
-};
-
-/* ---------------- Workflow Brain (force-directed, heat-mapped, repetition-aware) ---------------- */
-const BRAIN={sim:null,pos:{},colorMode:'heat',minRep:2,cap:30,nodes:[],links:[],raw:null};
-BRAIN.reload=async function(){
-  const stage=document.getElementById('brainStage');if(!stage)return;
-  const stat=document.getElementById('bstat');if(stat)stat.textContent='loading sessions…';
-  try{
-    let sessions=(SESSIONS&&SESSIONS.length)?SESSIONS.slice():await api('/api/sessions');
-    sessions=sessions.slice(0,this.cap);
-    const details=[];let idx=0;const conc=Math.min(5,sessions.length||1);
-    const worker=async()=>{while(idx<sessions.length){const k=idx++;const s=sessions[k];
-      try{const d=await api('/api/session?file='+encodeURIComponent(s.file));details.push({s,d});
-        if(stat)stat.textContent=`parsed ${details.length}/${sessions.length} sessions`;}catch(e){}}};
-    await Promise.all(Array.from({length:conc},worker));
-    this.raw={sessions,details};this.build();
-  }catch(e){stage.innerHTML='<p class="muted" style="padding:18px">Could not build the brain. Try ↻ Re-pulse, or check the server.</p>';}
-};
-BRAIN.build=function(){
-  if(!this.raw)return;
-  const details=this.raw.details;
-  const times=details.map(x=>Date.parse(x.s.lastTs||0)).filter(Boolean);
-  const tmin=times.length?Math.min.apply(null,times):0, tmax=times.length?Math.max.apply(null,times):1;
-  const heat=ts=>{const t=Date.parse(ts||0);if(!t||tmax===tmin)return .5;return (t-tmin)/(tmax-tmin);};
-  const nodes=[],links=[],byId={};
-  const add=n=>{if(!byId[n.id]){byId[n.id]=n;nodes.push(n);}return byId[n.id];};
-  const sigMap={};
-  details.forEach(({s,d})=>{(d.timeline||[]).filter(e=>e.kind==='tool_use').forEach(e=>{
-    const sig=(e.tool||'tool')+'|'+(e.summary||'');
-    const mm=sigMap[sig]||(sigMap[sig]={sig,tool:e.tool,label:e.summary||e.tool,count:0,sessions:{},errors:0,lastTs:''});
-    mm.count++;mm.sessions[s.file]=(mm.sessions[s.file]||0)+1;if(e.status==='error')mm.errors++;if((s.lastTs||'')>mm.lastTs)mm.lastTs=s.lastTs;});});
-  const projSeen={};
-  details.forEach(({s,d})=>{
-    const p=s.project||'(unknown)',pid='p:'+p;
-    if(!projSeen[pid]){projSeen[pid]=1;add({id:pid,type:'project',label:p,heat:heat(s.lastTs),r:13});}
-    else{byId[pid].heat=Math.max(byId[pid].heat,heat(s.lastTs));}
-    const sid='s:'+s.file;
-    const tools=(+s.toolCalls)||((d.tools||[]).reduce((a,b)=>a+(b.count||0),0));
-    let pi=0,pe=0;(d.timeline||[]).forEach(e=>{if(e.kind==='tool_use'){((e.origin||classifyTool(e.tool,e.summary))==='external')?pe++:pi++;}});
-    const extPct=(pi+pe)?pe/(pi+pe):(+s.extPct||0);
-    add({id:sid,type:'session',label:(s.sessionId||'').slice(0,8)||'session',file:s.file,heat:heat(s.lastTs),extPct:extPct,live:!!s.live,source:s.source,
-         r:6+Math.sqrt((tools||1))*1.4,tools:tools,tokens:(+s.tokensInTotal||0)+(+s.tokensOut||0),sub:+s.subagentFiles||0,lastTs:s.lastTs,project:p});
-    links.push({source:pid,target:sid,type:'has'});
-  });
-  const sigs=Object.values(sigMap).filter(mm=>mm.count>=this.minRep).sort((a,b)=>b.count-a.count).slice(0,80);
-  sigs.forEach(mm=>{
-    const tid='t:'+mm.sig;
-    add({id:tid,type:'task',label:mm.label,tool:mm.tool,count:mm.count,reuse:Object.keys(mm.sessions).length,errors:mm.errors,heat:heat(mm.lastTs),extPct:classifyTool(mm.tool)==='external'?1:0,r:6+Math.sqrt(mm.count)*3});
-    Object.keys(mm.sessions).forEach(f=>{if(byId['s:'+f])links.push({source:'s:'+f,target:tid,type:'did',w:mm.sessions[f]});});
-  });
-  const stat=document.getElementById('bstat');
-  if(stat)stat.textContent=`${nodes.filter(n=>n.type==='session').length} sessions · ${nodes.filter(n=>n.type==='project').length} workflows · ${sigs.length} repeated tasks`;
-  this.nodes=nodes;this.links=links;this.draw();
-};
-BRAIN.draw=function(){
-  const stage=document.getElementById('brainStage');if(!stage||typeof d3==='undefined')return;
-  const W=stage.clientWidth||900,H=stage.clientHeight||600;stage.innerHTML='';
-  const svg=d3.select(stage).append('svg').attr('width',W).attr('height',H).style('display','block');
-  const g=svg.append('g');
-  svg.call(d3.zoom().scaleExtent([0.2,4]).on('zoom',ev=>g.attr('transform',ev.transform)));
-  this.nodes.forEach(n=>{const p=this.pos[n.id];if(p){n.x=p.x;n.y=p.y;}});
-  const link=g.append('g').selectAll('line').data(this.links).join('line')
-     .attr('stroke',d=>d.type==='did'?'#3d4f74':'#26324a').attr('stroke-opacity',.6)
-     .attr('stroke-width',d=>d.type==='did'?Math.min(4,1+(d.w||1)*0.5):1.1);
-  const node=g.append('g').selectAll('g').data(this.nodes,d=>d.id).join('g').style('cursor','pointer')
-     .call(d3.drag().on('start',dS).on('drag',dM).on('end',dE))
-     .on('click',(ev,d)=>BRAIN.click(d)).on('mousemove',(ev,d)=>BRAIN.tip(ev,d)).on('mouseleave',()=>BRAIN.tip(null));
-  node.append('circle').attr('r',d=>d.r).attr('fill',d=>BRAIN.color(d))
-     .attr('stroke',d=>d.type==='task'?'#ffffff66':'#ffffff22').attr('stroke-width',d=>d.type==='task'?1.5:1)
-     .style('filter','drop-shadow(0 0 5px rgba(120,160,255,.22))');
-  node.filter(d=>d.live).append('circle').attr('r',d=>d.r+4).attr('fill','none').attr('stroke','#19c37d').attr('stroke-width',1.6).attr('class','livering').style('pointer-events','none');
-  node.filter(d=>d.type==='task'&&d.count>1).append('text').text(d=>d.count).attr('text-anchor','middle').attr('dy',3).attr('font-size',9).attr('font-weight','bold').attr('fill','#0a0e16').style('pointer-events','none');
-  node.append('text').text(d=>BRAIN.lbl(d)).attr('x',d=>d.r+4).attr('dy',4).attr('font-size',10).attr('fill','#cdd7e6').style('pointer-events','none');
-  this.sim=d3.forceSimulation(this.nodes)
-     .force('link',d3.forceLink(this.links).id(d=>d.id).distance(d=>d.type==='did'?70:42).strength(.4))
-     .force('charge',d3.forceManyBody().strength(-150))
-     .force('center',d3.forceCenter(W/2,H/2))
-     .force('collide',d3.forceCollide().radius(d=>d.r+4))
-     .on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
-       node.attr('transform',d=>`translate(${d.x},${d.y})`);this.nodes.forEach(n=>this.pos[n.id]={x:n.x,y:n.y});});
-  function dS(ev,d){if(!ev.active)BRAIN.sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}
-  function dM(ev,d){d.fx=ev.x;d.fy=ev.y;}
-  function dE(ev,d){if(!ev.active)BRAIN.sim.alphaTarget(0);d.fx=null;d.fy=null;}
-  this.legend();
-};
-BRAIN.color=function(d){
-  if(this.colorMode==='type')return {project:'#22d3ee',session:'#a78bfa',task:'#ffb020'}[d.type]||'#5b8cff';
-  if(this.colorMode==='prov')return provColor(d.extPct==null?0:d.extPct);
-  const h=d.heat==null?.5:d.heat,cold=[40,54,80],warm=[255,93,58];
-  const c=cold.map((x,i)=>Math.round(x+(warm[i]-x)*h));return `rgb(${c[0]},${c[1]},${c[2]})`;
-};
-BRAIN.lbl=function(d){if(d.type==='project')return d.label;if(d.type==='task')return (d.label||'').slice(0,24);return '';};
-BRAIN.paint=function(){if(typeof d3==='undefined')return;d3.select(document.getElementById('brainStage')).selectAll('circle').attr('fill',d=>BRAIN.color(d));this.legend();};
-BRAIN.click=function(d){if(d.type==='session')openSession(encodeURIComponent(d.file));else if(d.type==='task')BRAIN.taskDrawer(d);};
-BRAIN.taskDrawer=function(d){
-  const ids=this.links.filter(l=>((l.target.id||l.target)===d.id)).map(l=>(l.source.id||l.source));
-  document.getElementById('drawer').classList.add('open');document.getElementById('dbg').style.display='block';
-  document.getElementById('d-title').innerHTML=`Repeated task <span class="muted">${esc(d.tool||'')}</span>`;
-  document.getElementById('d-body').innerHTML=`
-    <div class="kpis" style="grid-template-columns:repeat(3,1fr)">${kpi(d.count,'Times executed')}${kpi(d.reuse,'Across sessions')}${kpi(d.errors||0,'Errors')}</div>
-    <div class="card" style="margin-bottom:12px"><h3>Signature</h3><div class="rd" style="color:var(--txt);font-family:monospace;word-break:break-all">${esc(d.label)}</div></div>
-    <div class="card"><h3>Sessions that ran this <span class="tag">${ids.length}</span></h3>
-      ${ids.map(id=>{const n=this.nodes.find(x=>x.id===id);return n?`<div class="row" onclick="openSession('${encodeURIComponent(n.file)}')"><div><div class="rn">${esc(n.project)}</div><div class="rd">${esc(n.label)}</div></div></div>`:'';}).join('')}</div>`;
-};
-BRAIN.tip=function(ev,d){const t=document.getElementById('brainTip');if(!t)return;if(!ev){t.style.display='none';return;}
-  const rect=document.getElementById('brainStage').getBoundingClientRect();let h='';
-  if(d.type==='session')h=`<b>${esc(d.project)}</b> · ${esc(d.label)} ${d.live?'<span style="color:#19c37d">● LIVE</span>':''}<br>${esc(d.source||'')} · ${d.tools} tools · ${d.sub} sub · ${fmtK(d.tokens)} tok · ${Math.round((d.extPct||0)*100)}% external<br><span class="muted">${esc((d.lastTs||'').slice(0,16).replace('T',' '))}</span>`;
-  else if(d.type==='task')h=`<b>repeated ${d.count}×</b> across ${d.reuse} session(s)${d.errors?` · ${d.errors} err`:''}<br><span class="muted">${esc((d.label||'').slice(0,130))}</span>`;
-  else h=`<b>${esc(d.label)}</b> · workflow`;
-  t.innerHTML=h;t.style.display='block';t.style.left=(ev.clientX-rect.left+14)+'px';t.style.top=(ev.clientY-rect.top+12)+'px';
-};
-BRAIN.legend=function(){const l=document.getElementById('brainLegend');if(!l)return;
-  if(this.colorMode==='heat')l.innerHTML='<b style="color:#cdd7e6">Heat = recency</b><div style="height:8px;width:150px;border-radius:5px;margin:5px 0;background:linear-gradient(90deg,rgb(40,54,80),rgb(255,93,58))"></div>dormant ⟶ active · <span style="color:#19c37d">◌</span> live · ◯ hub size = repeat count';
-  else if(this.colorMode==='prov')l.innerHTML='<b style="color:#cdd7e6">Provenance</b><div style="height:8px;width:150px;border-radius:5px;margin:5px 0;background:linear-gradient(90deg,#5b8cff,#ff9f43)"></div>internal (machine) ⟶ external (web/LLM) · <span style="color:#19c37d">◌</span> live';
-  else l.innerHTML='<b style="color:#cdd7e6">Entity</b><br><span style="color:#22d3ee">●</span> workflow &nbsp;<span style="color:#a78bfa">●</span> session &nbsp;<span style="color:#ffb020">●</span> repeated task &nbsp;·&nbsp; <span style="color:#19c37d">◌</span> live';
-};
-
-/* ---------------- Topology capability graph (D3) ---------------- */
-const TOPO={sim:null};
-TOPO.draw=function(){
-  const stage=document.getElementById('topoStage');if(!stage||typeof d3==='undefined')return;
-  const W=stage.clientWidth||900,H=stage.clientHeight||420;stage.innerHTML='';
-  const nodes=[],links=[],by={};
-  const add=(id,type,label,ex)=>{if(!by[id]){by[id]=Object.assign({id,type,label},ex||{});nodes.push(by[id]);}return by[id];};
-  add('root','root','AgentLens',{r:16});
-  const SEC=['scout-product-context','synthesize-system-schema','actor-profiling','stride-analysis','dread-ranking','attack-paths','detection-engineering','tabletop-scenarios','security-review','deepsec-scan','api-endpoint-scan'];
-  const suite=s=>(s[0].startsWith('threatlens')||SEC.includes(s[0]))?'ThreatLens':s[0].startsWith('mimir')?'Mimir':s[0].startsWith('marvin')?'Marvin':'Standalone';
-  add('h:skills','hub','Skills',{r:11});links.push({source:'root',target:'h:skills'});
-  const su={};DATA.skills.forEach(s=>{const g=suite(s),sid='suite:'+g;if(!su[g]){su[g]=1;add(sid,'suite',g,{r:9});links.push({source:'h:skills',target:sid});}const k='sk:'+s[0];add(k,'skill',s[0],{r:5});links.push({source:sid,target:k});});
-  add('h:agents','hub','Agents',{r:11});links.push({source:'root',target:'h:agents'});
-  DATA.agents.forEach(a=>{const k='ag:'+a;add(k,'agent',a,{r:5});links.push({source:'h:agents',target:k});});
-  add('h:mcp','hub','MCP',{r:11});links.push({source:'root',target:'h:mcp'});
-  DATA.mcp.forEach(x=>{const c=classifyTool4('mcp__'+x[0]+'__t'),k='mc:'+x[0];add(k,'mcp',x[0],{r:6,prov:c});links.push({source:'h:mcp',target:k});});
-  add('h:cmd','hub','Commands ×'+DATA.commands.length,{r:11});links.push({source:'root',target:'h:cmd'});
-  const col=d=>d.type==='root'?'#22d3ee':d.type==='hub'?'#5b8cff':d.type==='suite'?'#a78bfa':d.type==='mcp'?(CAT[d.prov]?CAT[d.prov][0]:'#ff9f43'):d.type==='agent'?'#3fb950':'#8aa0c0';
-  const svg=d3.select(stage).append('svg').attr('width',W).attr('height',H);const g=svg.append('g');
-  svg.call(d3.zoom().scaleExtent([0.3,4]).on('zoom',ev=>g.attr('transform',ev.transform)));
-  const link=g.append('g').attr('stroke','#26324a').attr('stroke-opacity',.5).selectAll('line').data(links).join('line').attr('stroke-width',1);
-  const node=g.append('g').selectAll('g').data(nodes).join('g').style('cursor','grab')
-    .call(d3.drag().on('start',(e,d)=>{if(!e.active)TOPO.sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)TOPO.sim.alphaTarget(0);d.fx=null;d.fy=null;}));
-  node.append('circle').attr('r',d=>d.r||5).attr('fill',col).attr('stroke','#ffffff22').style('filter','drop-shadow(0 0 4px rgba(120,160,255,.25))');
-  node.filter(d=>['root','hub','suite'].includes(d.type)).append('text').text(d=>d.label).attr('x',d=>(d.r||5)+5).attr('dy',4).attr('font-size',11).attr('fill','#dbe6f5');
-  node.append('title').text(d=>d.label);
-  TOPO.sim=d3.forceSimulation(nodes)
-    .force('link',d3.forceLink(links).id(d=>d.id).distance(d=>['skill','agent','mcp'].includes(d.type)?26:62).strength(.5))
-    .force('charge',d3.forceManyBody().strength(-95)).force('center',d3.forceCenter(W/2,H/2))
-    .force('collide',d3.forceCollide().radius(d=>(d.r||5)+3))
-    .on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('transform',d=>`translate(${d.x},${d.y})`);});
-};
-
-/* ---------------- charts ---------------- */
-function baseOpts(legend){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:legend,labels:{color:'#8493a8',boxWidth:12,font:{size:11}}}},scales:legend?{}:{x:{ticks:{color:'#8493a8',font:{size:10}},grid:{color:'#1e2a3d'}},y:{ticks:{color:'#8493a8'},grid:{color:'#1e2a3d'}}}};}
-function drawBar(id,labels,data){const c=document.getElementById(id);if(!c)return;if(charts[id])charts[id].destroy();charts[id]=new Chart(c,{type:'bar',data:{labels,datasets:[{data,backgroundColor:'#5b8cff',borderRadius:6}]},options:baseOpts(false)});}
-function drawTokens(id,series){const c=document.getElementById(id);if(!c)return;if(charts[id])charts[id].destroy();
-  const labels=series.map(d=>(d.date||'').slice(5));
-  charts[id]=new Chart(c,{type:'bar',data:{labels,datasets:[
-    {label:'in',data:series.map(d=>d.in),backgroundColor:'#5b8cff',borderRadius:4,stack:'t'},
-    {label:'out',data:series.map(d=>d.out),backgroundColor:'#22d3ee',borderRadius:4,stack:'t'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#8493a8',boxWidth:12,font:{size:11}}}},
-      scales:{x:{stacked:true,ticks:{color:'#8493a8',font:{size:10}},grid:{color:'#1e2a3d'}},y:{stacked:true,ticks:{color:'#8493a8'},grid:{color:'#1e2a3d'}}}}});}
-function drawDoughnut(id,labels,data,colors){const c=document.getElementById(id);if(!c)return;if(charts[id])charts[id].destroy();charts[id]=new Chart(c,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors||['#5b8cff','#22d3ee','#a78bfa','#ffb020','#3fb950','#ff5d6c','#f472b6','#38bdf8'],borderWidth:0}]},options:baseOpts(true)});}
-
-/* ---------------- theme (day/night) ---------------- */
-function applyTheme(t){const light=t==='light';document.body.classList.toggle('light',light);const b=document.getElementById('themeBtn');if(b)b.textContent=light?'☀️ Light':'🌙 Dark';try{localStorage.setItem('agentlens-theme',t);}catch(e){}
-  if(curView==='graph'&&BRAIN.sim)BRAIN.draw();}
-function toggleTheme(){applyTheme(document.body.classList.contains('light')?'dark':'light');}
-
-/* ---------------- timers ---------------- */
-function setupTimer(){if(timer)clearInterval(timer);const on=document.getElementById('auto').checked,iv=+document.getElementById('ivl').value;if(on&&iv>0)timer=setInterval(()=>refreshAll(false),iv*1000);}
-document.getElementById('auto').onchange=setupTimer;document.getElementById('ivl').onchange=setupTimer;
-setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);
-
-/* ---------------- boot ---------------- */
-(async()=>{try{applyTheme(localStorage.getItem('agentlens-theme')||'dark');}catch(e){applyTheme('dark');}await refreshAll(false);setupTimer();})();
+function toggleTheme(){document.body.classList.toggle('light');render();}
+setInterval(()=>{document.getElementById('clock')&&(document.getElementById('clock').textContent=new Date().toLocaleTimeString());},1000);
+async function boot(){await refresh();if(timer)clearInterval(timer);timer=setInterval(()=>{if(document.getElementById('auto')&&document.getElementById('auto').checked){detect().then(()=>{if(['overview','claude','provenance'].includes(view))loadCore().then(render);});}},30000);}
+boot();
 </script>
 </body>
 </html>

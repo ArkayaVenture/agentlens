@@ -28,4 +28,4 @@ PY
 Do **not** open public issues for vulnerabilities — see [SECURITY.md](./SECURITY.md).
 
 ## Questions / commercial use
-soumen.trivedi@arkayaventure.co.uk · https://arkayaventure.com
+hello@arkayaventure.com · https://arkayaventure.com

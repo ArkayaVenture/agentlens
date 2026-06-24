@@ -77,23 +77,9 @@ spawns sub-agents (fan-out), classifies signal vs noise, runs an adversarial ver
 loops until done, and writes results back into the brain + `dashboard/feed.json`. The local server
 just exposes the brain; it holds no state of its own.
 
-## Inspiration drawn from ~/IdeaProjects-external
-
-These local projects informed the design (reuse where you extend the platform):
-- **nanoclaw / nanoclaw-docker-sandboxes** — local sandboxed-agent execution model for safely
-  running the maintenance agents.
-- **agent-power-pack / claude-power-pack / codex-power-pack** — the bundling pattern for packaging
-  the brain's skills/agents as an installable pack.
-- **mcp-neo4j-agent-memory** — candidate graph backend to evolve the brain from flat files to a
-  queryable knowledge graph (v2).
-- **turbo-whisper** — packaged Claude-Code-plugin layout (`.claude-plugin/`, hooks, marketplace)
-  to ship this whole thing as a plugin later.
-- **ms-365-mcp-server / TeamsMediaBot** — connectors for surfacing the dashboard/digests into
-  Teams or O365 if you want push delivery.
 
 ## Roadmap to "fully agent-managed"
 1. ✅ Local server on dedicated port + launchd always-on.
 2. ✅ Daily + weekly enrichment agents (ultracode) writing the brain + feed.
 3. ◻ A "supervisor" scheduled task (e.g. every 6h) that health-checks the port, restarts if down,
    and verifies the last loop ran — wire it once you've confirmed the loops have folder access.
-4. ◻ Graph backend via mcp-neo4j-agent-memory; package as a power-pack/plugin.

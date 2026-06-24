@@ -45,7 +45,7 @@ for embedded use.
 ## Contact
 
 **Arkaya Venture Limited (UK)**
-- Email: **soumen.trivedi@arkayaventure.co.uk**
+- Email: **hello@arkayaventure.com**
 - Web: **https://arkayaventure.com**
 
 Please include: your company, intended use, expected number of users, and

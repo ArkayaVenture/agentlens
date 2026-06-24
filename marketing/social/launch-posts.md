@@ -93,7 +93,7 @@ Alt text: *"AgentLens dashboard showing live Claude sessions, token usage and 4-
 
 - **Primary CTA:** *Install AgentLens — free for non-commercial use →* https://github.com/arkayaventure/agentlens
 - **Brand CTA:** *Built by Arkaya Venture Limited, UK →* https://arkayaventure.com
-- **Commercial CTA:** *Using it at work? Get a commercial licence →* soumen.trivedi@arkayaventure.co.uk
+- **Commercial CTA:** *Using it at work? Get a commercial licence →* hello@arkayaventure.com
 - **Email signature line:** *AgentLens — the local-first dashboard for Claude builders · arkayaventure.com*
 
 ## 🗓️ Suggested rollout (optional)

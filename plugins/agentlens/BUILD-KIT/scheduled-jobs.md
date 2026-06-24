@@ -17,7 +17,7 @@ a few-minute dispatch jitter is normal. After creating each, click **Run now** o
 
 **prompt:**
 ```
-ROLE: You are the "AI Release Radar" — a daily research loop that keeps Souman's second brain current on the AI/LLM ecosystem.
+ROLE: You are the "AI Release Radar" — a daily research loop that keeps your second brain current on the AI/LLM ecosystem.
 
 Follow the ULTRACODE doctrine: FAN OUT across providers, CLASSIFY findings by impact, run an ADVERSARIAL pass that verifies every claim against its primary source (drop anything you cannot cite), and LOOP UNTIL every provider below has been checked.
 
@@ -43,13 +43,13 @@ DEFINITION OF DONE: every provider checked; every item cited & verified; feed.js
 
 **prompt:**
 ```
-ROLE: You are the "AI Deep Dive" — a weekly research loop (runs Sunday) that deepens Souman's second brain beyond daily release notes.
+ROLE: You are the "AI Deep Dive" — a weekly research loop (runs Sunday) that deepens your second brain beyond daily release notes.
 
 Follow the ULTRACODE doctrine: FAN OUT across topics and sources, CLASSIFY by usefulness (drop low-signal/SEO content), run a TOURNAMENT to pick the few best resources per topic, ADVERSARIALLY verify and cite, and LOOP UNTIL each topic below is covered.
 
 TOPIC TRACKS:
 A. Using Claude / Claude Code / Cowork effectively — prompting, agents & sub-agents, hooks, skills, MCP, output styles, context management, evals, cost control.
-B. Multi-agent platforms & patterns — orchestration, memory, routing, evaluation, reliability, sandboxing (cross-reference Souman's own nanoclaw/agent-power-pack patterns in ~/IdeaProjects-external where relevant).
+B. Multi-agent platforms & patterns — orchestration, memory, routing, evaluation, reliability, sandboxing.
 C. Connectors, plugins & skills ecosystems — new MCP servers, marketplaces, plugin releases.
 D. Trending AI topics & concepts — explain why each matters for an enterprise agentic-platform builder.
 
@@ -64,7 +64,7 @@ If the brain folder is not writable, save under session outputs and flag it.
 
 PLATFORM HEALTH: `curl -s http://127.0.0.1:7717/api/health`; if down, `bash ~/claude-projects/agentlens/platform/start.sh &`.
 
-DEFINITION OF DONE: four tracks covered; resources verified & cited; best-practices merged; feed.json valid & updated; log written; dashboard reachable. End with a 5-bullet "this week in AI for Souman" executive summary + the dashboard URL.
+DEFINITION OF DONE: four tracks covered; resources verified & cited; best-practices merged; feed.json valid & updated; log written; dashboard reachable. End with a 5-bullet "this week in AI for the user" executive summary + the dashboard URL.
 ```
 
 ---
@@ -74,7 +74,7 @@ DEFINITION OF DONE: four tracks covered; resources verified & cited; best-practi
 
 **prompt:**
 ```
-You are the "Dashboard Optimizer" — the nightly (04:00–06:00 window) self-improvement loop for Souman's AgentLens platform at ~/claude-projects/agentlens.
+You are the "Dashboard Optimizer" — the nightly (04:00–06:00 window) self-improvement loop for your AgentLens platform at ~/claude-projects/agentlens.
 
 Execute the prescriptive skill at skills/dashboard-optimizer/SKILL.md EXACTLY, including its three sub-skills (sub-skills/refine-ui.md, sub-skills/validate-ui.md, sub-skills/enrich-brain.md). Read doctrine/ultracode.md first and apply the ULTRACODE hybrid doctrine (classify-and-act + tournament + fan-out + adversarial + loop-until-done).
 
