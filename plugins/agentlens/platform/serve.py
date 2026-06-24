@@ -542,6 +542,20 @@ def save_config(cfg):
     except Exception:
         return False
 
+def _apply_config_sources():
+    """Merge user-configured extra source roots (from config.json) into SOURCES at startup."""
+    for sc in (load_config().get("sources") or []):
+        lbl = (sc.get("label") or "").strip(); root = sc.get("root")
+        if not lbl or not root:
+            continue
+        root = os.path.expanduser(root)
+        found = False
+        for x in SOURCES:
+            if x["label"] == lbl:
+                x["root"] = root; found = True
+        if not found:
+            SOURCES.append({"label": lbl, "root": root, "flat": bool(sc.get("flat", False))})
+
 def _list_skill_names(d):
     out = []
     if os.path.isdir(d):
@@ -831,6 +845,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         pass
+
+_apply_config_sources()
 
 def main():
     ap = argparse.ArgumentParser()

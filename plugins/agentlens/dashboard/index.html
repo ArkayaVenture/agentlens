@@ -222,7 +222,13 @@ AGENTLENS_COWORK_ROOT=~/Library/Application Support/Claude/local-agent-mode-sess
 AGENTLENS_CURSOR_USER=~/Library/Application Support/Cursor/User
 # extra platform (JSONL transcripts):
 AGENTLENS_EXTRA_SOURCES=codex:~/.codex/sessions,windsurf:~/.windsurf/history</pre></div>`;}
-function cfgPlatforms(){openDrawer('Configure sources','<p class="muted">Source roots are set via environment variables read at service start (see the panel). A future release will let you edit these here and persist them to your local config.json.</p>');}
+function cfgPlatforms(){window._srcs=(CONFIG.sources&&CONFIG.sources.length)?JSON.parse(JSON.stringify(CONFIG.sources)):((HEALTH&&HEALTH.sources)||[]).map(s=>({label:s.label,root:s.root,flat:false}));openDrawer('Configure data sources',srcEditorHTML());}
+function srcEditorHTML(){const s=window._srcs||[];return `<p class="muted">AgentLens reads transcripts from these source roots. Add any agent/codex platform that writes JSONL transcripts — changes save to your local <code>config.json</code> and apply on the next service restart.</p>
+  <div id="srcRows">${s.map((x,i)=>`<div class="filterrow" style="grid-template-columns:1fr 2fr 60px 28px;margin-bottom:7px"><input value="${esc(x.label)}" placeholder="label" oninput="window._srcs[${i}].label=this.value"><input value="${esc(x.root)}" placeholder="~/.codex/sessions" oninput="window._srcs[${i}].root=this.value"><label class="chip src" style="cursor:pointer;text-align:center"><input type="checkbox" ${x.flat?"checked":""} onchange="window._srcs[${i}].flat=this.checked" style="display:none">${x.flat?"flat":"nested"}</label><span class="icobtn" onclick="window._srcs.splice(${i},1);openDrawer('Configure data sources',srcEditorHTML())">✕</span></div>`).join("")}</div>
+  <button class="btn" onclick="window._srcs.push({label:'',root:'',flat:false});openDrawer('Configure data sources',srcEditorHTML())">＋ source</button>
+  <button class="btn pri" style="margin-left:8px" onclick="saveSources()">Save</button>
+  <div id="srcMsg" class="dim" style="margin-top:12px"></div>`;}
+async function saveSources(){CONFIG.sources=(window._srcs||[]).filter(x=>x.label&&x.root);await post('/api/config',CONFIG);const el=document.getElementById('srcMsg');if(el)el.innerHTML='✓ Saved to config.json. Restart to apply: <code>bash ~/claude-projects/my-brain/platform/ctl.sh restart</code>';}
 
 async function vProv(){const m=document.getElementById('main');const o=OVER;if(!o){m.innerHTML=shell('Provenance','')+'<div class="empty">Start the server.</div>';return;}
   const pv=o.provenance,contrib=o.provContributors||{};const ks=['local','mcp','web','llm'];
