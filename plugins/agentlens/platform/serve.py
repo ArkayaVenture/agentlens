@@ -41,6 +41,7 @@ SOURCES = [
     {"label": "cowork", "root": COWORK_DIR, "flat": False},
     {"label": "cursor", "root": CURSOR_DIR, "flat": False},
 ]
+BASE_SOURCES = [dict(x) for x in SOURCES]
 MAX_SESSIONS = 600
 MAX_BYTES = 300 * 1024 * 1024
 LIVE_WINDOW = int(os.environ.get("AGENTLENS_LIVE_WINDOW", "900"))  # a session is "live/active" if touched within 15 min
@@ -543,18 +544,21 @@ def save_config(cfg):
         return False
 
 def _apply_config_sources():
-    """Merge user-configured extra source roots (from config.json) into SOURCES at startup."""
+    """Rebuild SOURCES from the built-in base + user-configured roots (config.json).
+    Called at startup AND on /api/reload, so adding/removing sources takes effect live."""
+    global SOURCES
+    rebuilt = [dict(x) for x in BASE_SOURCES]
     for sc in (load_config().get("sources") or []):
         lbl = (sc.get("label") or "").strip(); root = sc.get("root")
         if not lbl or not root:
             continue
         root = os.path.expanduser(root)
-        found = False
-        for x in SOURCES:
-            if x["label"] == lbl:
-                x["root"] = root; found = True
-        if not found:
-            SOURCES.append({"label": lbl, "root": root, "flat": bool(sc.get("flat", False))})
+        existing = next((x for x in rebuilt if x["label"] == lbl), None)
+        if existing:
+            existing["root"] = root
+        else:
+            rebuilt.append({"label": lbl, "root": root, "flat": bool(sc.get("flat", False))})
+    SOURCES = rebuilt
 
 def _list_skill_names(d):
     out = []
@@ -779,6 +783,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         try:
             u = urllib.parse.urlparse(self.path)
+            if u.path == "/api/reload":
+                _apply_config_sources()
+                return self._json({"ok": True, "sources": [{"label": x["label"], "root": x["root"]} for x in SOURCES]})
             if u.path == "/api/config":
                 n = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(n) if n else b"{}"

@@ -228,7 +228,7 @@ function srcEditorHTML(){const s=window._srcs||[];return `<p class="muted">Agent
   <button class="btn" onclick="window._srcs.push({label:'',root:'',flat:false});openDrawer('Configure data sources',srcEditorHTML())">＋ source</button>
   <button class="btn pri" style="margin-left:8px" onclick="saveSources()">Save</button>
   <div id="srcMsg" class="dim" style="margin-top:12px"></div>`;}
-async function saveSources(){CONFIG.sources=(window._srcs||[]).filter(x=>x.label&&x.root);await post('/api/config',CONFIG);const el=document.getElementById('srcMsg');if(el)el.innerHTML='✓ Saved to config.json. Restart to apply: <code>bash ~/claude-projects/my-brain/platform/ctl.sh restart</code>';}
+async function saveSources(){CONFIG.sources=(window._srcs||[]).filter(x=>x.label&&x.root);await post('/api/config',CONFIG);let applied=false;try{const r=await post('/api/reload',{});applied=!!(r&&r.ok);}catch(e){}const el=document.getElementById('srcMsg');if(el)el.innerHTML=applied?'✓ Saved &amp; applied live — sources updated without a restart.':'✓ Saved to config.json (restart to apply).';TOPO=null;OVER=null;DSCACHE={};if(applied)setTimeout(()=>{loadCore().then(()=>{});},300);}
 
 async function vProv(){const m=document.getElementById('main');const o=OVER;if(!o){m.innerHTML=shell('Provenance','')+'<div class="empty">Start the server.</div>';return;}
   const pv=o.provenance,contrib=o.provContributors||{};const ks=['local','mcp','web','llm'];
