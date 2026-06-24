@@ -1,0 +1,62 @@
+name: validate-and-release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node (for inline-JS syntax check)
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Validate plugin manifest (claude plugin validate --strict)
+        run: |
+          if command -v claude >/dev/null 2>&1; then
+            claude plugin validate . --strict
+          else
+            echo "claude CLI not present on runner — running manual structural checks"
+            python3 - <<'PY'
+          import json,re,sys,os
+          ok=True
+          for f in [".claude-plugin/marketplace.json","plugins/my-brain/.claude-plugin/plugin.json"]:
+              json.load(open(f)); print("valid JSON:",f)
+          name=json.load(open("plugins/my-brain/.claude-plugin/plugin.json"))["name"]
+          assert re.fullmatch(r"[a-z0-9-]+",name), "plugin name must be kebab-case"
+          assert os.path.isfile("plugins/my-brain/skills/setup-my-brain/SKILL.md")
+          print("structural checks passed")
+          PY
+          fi
+      - name: Compile server (stdlib only)
+        run: python3 -m py_compile plugins/my-brain/platform/serve.py
+      - name: Check inline dashboard JS syntax
+        run: |
+          python3 - > /tmp/inline.js <<'PY'
+          import re
+          print("\n".join(re.findall(r"<script>(.*?)</script>", open("plugins/my-brain/dashboard/index.html").read(), re.S)))
+          PY
+          node --check /tmp/inline.js
+
+  release:
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package convenience artifact (my-brain.plugin)
+        run: |
+          cd plugins/my-brain
+          zip -rq /tmp/my-brain.plugin . -x "*.DS_Store" -x "*__pycache__*" -x "*.pyc"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/my-brain.plugin
+          generate_release_notes: true

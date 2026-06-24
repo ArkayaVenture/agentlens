@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>my-brain — Second Brain & Live Dashboard for Claude · Arkaya Venture</title>
+<meta name="description" content="A local-first Claude plugin: an always-on dashboard for your Claude Code, Cowork & Cursor work, plus a self-enriching second brain. No telemetry. By Arkaya Venture Limited, UK."/>
+<meta property="og:title" content="my-brain — Second Brain & Live Dashboard for Claude"/>
+<meta property="og:description" content="Live sessions, tokens, 4-way data provenance & an ULTRACODE strategy view — fully local. By Arkaya Venture Limited, UK."/>
+<meta property="og:type" content="website"/>
+<style>
+  :root{
+    --bg:#04141f;--bg2:#081d2e;--panel:#0b2236;--panel2:#081d2f;--line:#183248;
+    --txt:#e9f1f8;--mut:#90a6bc;--accent:#2f6bff;--cyan:#37b0d0;--viol:#8a7dff;
+    --hi:#f0506e;--med:#f5a623;--lo:#19c37d;--chip:#0f2336;
+    --glow:radial-gradient(1100px 560px at 85% -8%,#0c2c4a,transparent 60%);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+       background:var(--glow),var(--bg);color:var(--txt)}
+  a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  header{display:flex;align-items:center;gap:10px;padding:18px 22px;max-width:1080px;margin:0 auto}
+  .brand{font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:9px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+  header nav{margin-left:auto;display:flex;gap:18px;font-size:14px;color:var(--mut)}
+  header nav a{color:var(--mut)}
+  .hero{text-align:center;padding:48px 0 26px}
+  .pill{display:inline-block;font-size:12.5px;font-weight:700;color:var(--cyan);background:var(--chip);
+        border:1px solid var(--line);border-radius:30px;padding:6px 14px;margin-bottom:18px}
+  h1{font-size:46px;line-height:1.08;margin:0 0 14px;letter-spacing:-.5px}
+  h1 .grad{background:linear-gradient(90deg,#37b0d0,#5b8cff,#8a7dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:19px;color:var(--mut);max-width:720px;margin:0 auto 26px}
+  .cta{display:inline-flex;gap:10px;align-items:center;background:linear-gradient(90deg,#2f6bff,#37b0d0);
+       color:#fff;font-weight:700;padding:13px 22px;border-radius:11px;border:0;font-size:15px;cursor:pointer}
+  .cta.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .install{margin:26px auto 0;max-width:640px;text-align:left;background:#06101b;border:1px solid var(--line);
+           border-radius:12px;padding:16px 18px;font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfe3f5}
+  .install .c{color:var(--lo)}.install .m{color:var(--mut)}
+  .trust{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+  .badge{font-size:12px;color:var(--mut);background:var(--chip);border:1px solid var(--line);border-radius:20px;padding:4px 11px}
+  .badge b{color:var(--lo)}
+  section{padding:42px 0;border-top:1px solid var(--line)}
+  h2{font-size:28px;margin:0 0 6px;text-align:center}
+  .lead{color:var(--mut);text-align:center;max-width:680px;margin:0 auto 28px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card .ic{font-size:22px}.card h3{margin:10px 0 6px;font-size:16px}.card p{margin:0;color:var(--mut);font-size:14px}
+  .mock{margin:8px auto 0;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,12,28,.6);max-width:920px}
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .tier{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:20px}
+  .tier h3{margin:0 0 4px}.tier .who{color:var(--mut);font-size:13.5px;min-height:38px}
+  .tier ul{padding-left:18px;color:var(--mut);font-size:14px}
+  .tier.free{border-color:#1f9d6355}.tier.comm{border-color:#2f6bff55}
+  .sec{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:820px;margin:0 auto}
+  .sec div{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px;font-size:14px;color:var(--mut)}
+  .sec b{color:var(--txt)}
+  footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--mut);font-size:13.5px}
+  .social{display:flex;gap:16px;justify-content:center;margin:10px 0}
+  @media(max-width:820px){.grid,.tiers{grid-template-columns:1fr}.sec{grid-template-columns:1fr}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="dot"></span> my-brain</div>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#security">Security</a>
+    <a href="#pricing">Licence</a>
+    <a href="https://github.com/arkayaventure/my-brain">GitHub</a>
+    <a href="https://arkayaventure.com">Arkaya&nbsp;Venture&nbsp;↗</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="pill">A Claude Code & Cowork plugin · by Arkaya Venture Limited, UK</span>
+    <h1>Your <span class="grad">second brain</span> &amp; live dashboard<br/>for everything you build with AI.</h1>
+    <p class="sub">my-brain installs an always-on local command center for your Claude Code, Cowork &amp; Cursor
+      sessions — tokens, sub-agents, 4-way data provenance and an ULTRACODE strategy view — plus a
+      self-enriching knowledge base. <b>Fully local. No hooks. No telemetry.</b></p>
+    <div class="ctas">
+      <a class="cta" href="https://github.com/arkayaventure/my-brain">⚡ Install the plugin</a>
+      <a class="cta ghost" href="#features">See what it does</a>
+    </div>
+    <div class="install">
+      <div><span class="m"># in Claude Code or Cowork</span></div>
+      <div><span class="c">/plugin</span> marketplace add arkayaventure/my-brain</div>
+      <div><span class="c">/plugin</span> install my-brain@arkaya-plugins</div>
+      <div><span class="c">/my-brain:setup-my-brain</span> <span class="m"># stands up the dashboard on :7717</span></div>
+    </div>
+    <div class="trust">
+      <span class="badge"><b>✓</b> No hooks</span>
+      <span class="badge"><b>✓</b> No bundled MCP</span>
+      <span class="badge"><b>✓</b> No telemetry</span>
+      <span class="badge"><b>✓</b> Loopback-only</span>
+      <span class="badge"><b>✓</b> Zero dependencies</span>
+      <span class="badge"><b>✓</b> CC BY-NC 4.0</span>
+    </div>
+  </div>
+
+  <div class="mock">
+    <!-- inline faithful mock of the Overview, so the page needs no external image -->
+    <svg viewBox="0 0 920 470" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;background:radial-gradient(720px 380px at 60% 18%,#0a2138,#04141f)">
+      <rect x="0" y="0" width="190" height="470" fill="#06141f"/>
+      <circle cx="24" cy="30" r="5" fill="#37b0d0"/><text x="38" y="34" fill="#e9f1f8" font-family="sans-serif" font-size="14" font-weight="700">my-brain</text>
+      <g font-family="sans-serif" font-size="12.5" fill="#90a6bc">
+        <rect x="12" y="52" width="166" height="26" rx="7" fill="#5b8cff22"/><text x="24" y="69" fill="#e9f1f8">📊 Overview</text>
+        <text x="24" y="98">🗂️ Sessions</text><text x="24" y="124">🤖 Agents</text><text x="24" y="150">🕸️ Graph</text>
+        <text x="24" y="176">📡 AI Feed</text><text x="24" y="202">🧩 Topology</text><text x="24" y="228">⚡ ULTRACODE</text>
+      </g>
+      <text x="210" y="40" fill="#e9f1f8" font-family="sans-serif" font-size="18" font-weight="800">Overview</text>
+      <text x="210" y="60" fill="#90a6bc" font-family="sans-serif" font-size="11.5">Live monitoring across Claude Code, Cowork &amp; Cursor · LIVE</text>
+      <g font-family="sans-serif">
+        <!-- KPI row -->
+        <g>
+          <rect x="210" y="74" width="160" height="62" rx="11" fill="#0b2236" stroke="#183248"/><text x="224" y="108" fill="#e9f1f8" font-size="22" font-weight="800">21</text><text x="224" y="124" fill="#90a6bc" font-size="10">SESSIONS</text>
+          <rect x="378" y="74" width="160" height="62" rx="11" fill="#0b2236" stroke="#183248"/><text x="392" y="108" fill="#19c37d" font-size="22" font-weight="800">2</text><text x="392" y="124" fill="#90a6bc" font-size="10">LIVE (15M)</text>
+          <rect x="546" y="74" width="160" height="62" rx="11" fill="#0b2236" stroke="#183248"/><text x="560" y="108" fill="#e9f1f8" font-size="22" font-weight="800">230</text><text x="560" y="124" fill="#90a6bc" font-size="10">SUB-AGENTS</text>
+          <rect x="714" y="74" width="160" height="62" rx="11" fill="#0b2236" stroke="#183248"/><text x="728" y="108" fill="#8a7dff" font-size="22" font-weight="800">98%</text><text x="728" y="124" fill="#90a6bc" font-size="10">CACHE HIT</text>
+        </g>
+        <!-- provenance bar -->
+        <rect x="210" y="150" width="664" height="120" rx="12" fill="#0b2236" stroke="#183248"/>
+        <text x="226" y="174" fill="#e9f1f8" font-size="13" font-weight="700">Data provenance</text>
+        <rect x="226" y="186" width="632" height="14" rx="7" fill="#0a1626"/>
+        <rect x="226" y="186" width="468" height="14" rx="0" fill="#5b8cff"/>
+        <rect x="694" y="186" width="14" height="14" fill="#a78bfa"/>
+        <rect x="708" y="186" width="150" height="14" fill="#ff9f43"/>
+        <g font-size="11" fill="#90a6bc"><text x="226" y="222">■ internal 74%</text><text x="330" y="222" fill="#a78bfa">■ firm 2%</text><text x="410" y="222" fill="#ff9f43">■ external web 23%</text><text x="560" y="222" fill="#ff5d6c">■ external LLM 0%</text></g>
+        <!-- token spark -->
+        <g>
+          <rect x="226" y="234" width="150" height="22" rx="6" fill="#0a1626"/><text x="236" y="249" fill="#37b0d0" font-size="11">6399.0M tokens in</text>
+          <rect x="386" y="234" width="120" height="22" rx="6" fill="#0a1626"/><text x="396" y="249" fill="#19c37d" font-size="11">27.4M out ↑</text>
+          <rect x="516" y="234" width="160" height="22" rx="6" fill="#0a1626"/><text x="526" y="249" fill="#90a6bc" font-size="11">cache read 6235.9M</text>
+        </g>
+        <!-- chart cards -->
+        <rect x="210" y="284" width="324" height="160" rx="12" fill="#0b2236" stroke="#183248"/>
+        <text x="226" y="306" fill="#e9f1f8" font-size="12.5" font-weight="700">Token usage over time</text>
+        <g fill="#2f6bff"><rect x="232" y="400" width="20" height="28"/><rect x="262" y="378" width="20" height="50"/><rect x="292" y="356" width="20" height="72"/><rect x="322" y="388" width="20" height="40"/><rect x="352" y="344" width="20" height="84"/><rect x="382" y="368" width="20" height="60"/><rect x="412" y="332" width="20" height="96"/><rect x="442" y="360" width="20" height="68"/><rect x="472" y="348" width="20" height="80"/></g>
+        <rect x="550" y="284" width="324" height="160" rx="12" fill="#0b2236" stroke="#183248"/>
+        <text x="566" y="306" fill="#e9f1f8" font-size="12.5" font-weight="700">⚡ Optimization suggestions</text>
+        <g font-size="11" fill="#90a6bc"><rect x="566" y="320" width="40" height="16" rx="5" fill="#19c37d33"/><text x="572" y="332" fill="#19c37d">info</text><text x="614" y="332">Good prompt-cache utilization (98%).</text>
+        <rect x="566" y="350" width="44" height="16" rx="5" fill="#f5a62333"/><text x="572" y="362" fill="#f5a623">med</text><text x="618" y="362">23% of calls are external — cache results.</text>
+        <rect x="566" y="380" width="44" height="16" rx="5" fill="#f5a62333"/><text x="572" y="392" fill="#f5a623">med</text><text x="618" y="392">Heaviest session ~2.9M tokens — split it.</text></g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Everything you ship with AI, on one screen</h2>
+    <p class="lead">my-brain reads the session transcripts you already have and turns them into a live,
+      drill-down command center — then keeps a cited knowledge base current for you.</p>
+    <div class="grid">
+      <div class="card"><div class="ic">📊</div><h3>Live monitoring</h3><p>Sessions, sub-agent fan-out, tool calls with pass/fail, durations and models — drill Overview → session → sub-agent → tool call.</p></div>
+      <div class="card"><div class="ic">🪙</div><h3>Token economics</h3><p>Tokens in/out, cache-hit %, top token-consuming sessions, token-by-tool attribution and cost-cutting tips.</p></div>
+      <div class="card"><div class="ic">🌐</div><h3>4-way provenance</h3><p>Every tool call tagged internal / firm MCP / external web / external LLM — know exactly where your data flows.</p></div>
+      <div class="card"><div class="ic">🕸️</div><h3>Workflow brain</h3><p>A force-directed graph of your workflows plus a capability topology of skills, agents and connectors.</p></div>
+      <div class="card"><div class="ic">⚡</div><h3>ULTRACODE view</h3><p>Detects fan-out, tournament, loop-until-done, adversarial and classify-and-act patterns in your real sessions.</p></div>
+      <div class="card"><div class="ic">📡</div><h3>Self-enriching feed</h3><p>Scheduled research loops keep a dated, source-cited digest of the AI ecosystem flowing into your brain.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <h2>Secure by construction</h2>
+    <p class="lead">Plugins run with your privileges, so my-brain minimises its surface — and shows you everything it does.</p>
+    <div class="sec">
+      <div><b>No hooks.</b> Nothing runs automatically on Claude Code events.</div>
+      <div><b>No bundled MCP servers.</b> The plugin adds no network connectors.</div>
+      <div><b>No telemetry.</b> Nothing is sent anywhere by this tool.</div>
+      <div><b>Zero dependencies.</b> Python standard library + one HTML file.</div>
+      <div><b>Loopback-only.</b> The server binds 127.0.0.1 — never your network.</div>
+      <div><b>Auditable.</b> Plain, unobfuscated code with a path-traversal-guarded API.</div>
+    </div>
+    <p class="lead" style="margin-top:22px"><a href="https://github.com/arkayaventure/my-brain/blob/main/SECURITY.md">Read the full security policy &amp; threat model →</a></p>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <h2>Free for non-commercial. Fair for business.</h2>
+    <p class="lead">Licensed under <b>CC BY-NC 4.0</b> with attribution to Arkaya Venture Limited, UK.
+      Commercial use is available under a simple paid licence.</p>
+    <div class="tiers">
+      <div class="tier free"><h3>Non-commercial</h3><div class="who">Personal projects, research, evaluation, non-profit & OSS.</div>
+        <ul><li>Free, forever</li><li>Full features</li><li>Attribution required</li></ul>
+        <a class="cta ghost" href="https://github.com/arkayaventure/my-brain">Get it on GitHub</a></div>
+      <div class="tier comm"><h3>Commercial</h3><div class="who">For-profit teams, paid products, internal company use.</div>
+        <ul><li>Per-seat or site licence</li><li>Optional attribution waiver</li><li>Priority support</li></ul>
+        <a class="cta" href="mailto:soumen.trivedi@arkayaventure.co.uk?subject=my-brain%20commercial%20licence">Request a licence</a></div>
+      <div class="tier comm"><h3>OEM / SaaS</h3><div class="who">Embed or resell in your own product or hosted service.</div>
+        <ul><li>Redistribution rights</li><li>Royalty or flat fee</li><li>Custom terms</li></ul>
+        <a class="cta ghost" href="https://arkayaventure.com">Talk to Arkaya</a></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="social">
+    <a href="https://www.linkedin.com/company/arkaya-venture">LinkedIn</a>
+    <a href="https://x.com/arkayaventure">X</a>
+    <a href="https://www.facebook.com/arkayaventure">Facebook</a>
+    <a href="https://arkayaventure.com">arkayaventure.com</a>
+  </div>
+  © 2026 <b>Arkaya Venture Limited</b>, United Kingdom · my-brain is licensed under
+  <a href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a> · Commercial licence available.
+</footer>
+</body>
+</html>

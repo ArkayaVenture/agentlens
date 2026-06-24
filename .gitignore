@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+# Python
+__pycache__/
+*.pyc
+# Local runtime (never publish a user's brain data)
+logs/
+inbox/
+*.log
+# Local publishing helper (machine-specific, do not distribute)
+publish-to-github.command
+# Build artifacts
+*.plugin
+/dist/

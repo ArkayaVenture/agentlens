@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "arkaya-plugins",
+  "owner": { "name": "Arkaya Venture Limited", "email": "soumen.trivedi@arkayaventure.co.uk" },
+  "metadata": {
+    "description": "Local-first AI productivity plugins by Arkaya Venture Limited, UK.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "my-brain",
+      "source": "./plugins/my-brain",
+      "displayName": "my-brain — Second Brain & Live Dashboard",
+      "description": "Always-on local dashboard + self-enriching second brain for Claude Code, Cowork & Cursor. Live sessions, sub-agents, tokens, 4-way data provenance, ULTRACODE strategy view. Fully local: no hooks, no bundled MCP, no telemetry.",
+      "version": "1.0.0",
+      "author": { "name": "Arkaya Venture Limited", "url": "https://arkayaventure.com" },
+      "homepage": "https://arkayaventure.github.io/my-brain/",
+      "repository": "https://github.com/arkayaventure/my-brain",
+      "license": "CC-BY-NC-4.0",
+      "category": "productivity",
+      "keywords": ["dashboard","second-brain","observability","ultracode","provenance","tokens","local-first"],
+      "strict": true,
+      "defaultEnabled": true
+    }
+  ]
+}

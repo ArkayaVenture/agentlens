@@ -1,0 +1,39 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "office-memory": {
+      "type": "http",
+      "url": "http://127.0.0.1:8787/mcp"
+    },
+    "Atlassian": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://mcp.atlassian.com/v1/mcp"
+      ],
+      "env": {}
+    },
+    "pyright": {
+      "command": "python3",
+      "args": [
+        "/workspace/.mcp/mcp_pyright.py"
+      ]
+    },
+    "typescript": {
+      "command": "python3",
+      "args": [
+        "/workspace/.mcp/mcp_typescript.py"
+      ]
+    },
+    "skill-marketplace": {
+      "command": "marketplace-mcp",
+      "env": {
+        "MARKETPLACE_URL": "http://127.0.0.1:8080",
+        "MARKETPLACE_TOKEN": "<REDACTED — set me>"
+      }
+    }
+  }
+}
