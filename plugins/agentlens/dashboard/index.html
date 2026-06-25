@@ -34,6 +34,22 @@ main{padding:18px 22px;overflow:auto;flex:1;min-height:0}
 .maincol{display:flex;flex-direction:column;height:100vh;min-width:0}
 .appftr{border-top:1px solid var(--line);padding:9px 22px;font-size:11.5px;color:var(--mut);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;background:linear-gradient(180deg,var(--bg2),var(--bg))}
 .appftr a{color:var(--cyan);cursor:pointer}.appftr b{color:var(--txt)}
+.cmdbar{display:flex;align-items:center;gap:10px;padding:9px 22px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--bg2),var(--bg));position:sticky;top:0;z-index:30;flex-wrap:wrap}
+.cmdbar .cb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:700}
+.cmdbar select{padding:5px 8px}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--chip)}
+.seg button{background:transparent;border:0;color:var(--mut);padding:5px 10px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit}
+.seg button:hover{color:var(--txt)}.seg button.on{background:linear-gradient(90deg,#4d7cfe,#2fd0e0);color:#fff}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:var(--sh);min-width:240px;padding:6px;display:none;z-index:50}
+.menu.open{display:block}
+.menu .mi{display:block;width:100%;text-align:left;background:transparent;border:0;color:var(--txt);padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12.5px;font-family:inherit}
+.menu .mi:hover:not(:disabled){background:#4d7cfe18}
+.menu .mi:disabled{color:var(--dim);cursor:not-allowed}
+.menu .msec{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);padding:7px 10px 3px;font-weight:700}
+.drill-back{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--cyan);font-size:12.5px;margin-bottom:12px;font-weight:600}
+.drill-back:hover{text-decoration:underline}
+.list .it.clk{cursor:pointer}.list .it.clk:hover{border-color:var(--accent);background:#16233f}
 .rangewrap{display:flex;gap:6px;align-items:center}.rangewrap select{padding:5px 8px}
 .head{display:flex;align-items:flex-end;gap:12px;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line)}
 h1{font-size:21px;margin:0;font-weight:800;letter-spacing:-.2px}.sub{color:var(--mut);font-size:13px;margin:4px 0 0;max-width:760px}
@@ -115,13 +131,13 @@ input[type=search],input[type=text]{min-width:200px}
     <div class="navsec">Trust</div>
     <div class="nav" data-v="privacy"><span class="ico">🛡️</span> Privacy</div>
     <div class="railftr">
-      <div class="rangewrap"><span class="dim">Range</span><select id="range" onchange="setRange(this.value)"><option value="all">All time</option><option value="24h">Last 24h</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></div>
+      <div class="rangewrap"><span class="dim">Range</span><select id="range" onchange="setRange(this.value)"><option value="all">All time</option><option value="15m">Last 15m</option><option value="1h">Last 1h</option><option value="24h">Last 24h</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></div>
       <label class="row" style="gap:7px"><input type="checkbox" id="auto" checked style="min-width:0"> auto-refresh</label>
       <button class="btn" onclick="toggleTheme()">◐ Theme</button>
       <span id="clock" class="dim"></span>
     </div>
   </nav>
-  <div class="maincol"><main id="main"></main><footer id="appftr" class="appftr"></footer></div>
+  <div class="maincol"><div id="cmdbar" class="cmdbar"></div><main id="main"></main><footer id="appftr" class="appftr"></footer></div>
 </div>
 <div class="drawer-bg" id="dbg" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer"><div class="dh"><b id="dtitle"></b><span class="x" onclick="closeDrawer()">✕</span></div><div class="db" id="dbody"></div></div>
@@ -130,7 +146,15 @@ const PROV={local:['--c-local','#4d7cfe','local (this machine)'],mcp:['--c-mcp',
 const api=async p=>{const r=await fetch(p,{cache:'no-store'});if(!r.ok)throw new Error(r.status);return r.json();};
 const post=async(p,b)=>{const r=await fetch(p,{method:'POST',body:JSON.stringify(b)});return r.json();};
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const fmtK=n=>{n=+n||0;const a=Math.abs(n);return a>=1e9?(n/1e9).toFixed(1)+'B':a>=1e6?(n/1e6).toFixed(1)+'M':a>=1e3?(n/1e3).toFixed(1)+'k':String(Math.round(n));};
+let STATE=window.STATE||{scale:'auto'};window.STATE=STATE;
+const _SCALE={K:[1e3,'k'],M:[1e6,'M'],B:[1e9,'B'],T:[1e12,'T']};
+function fmt(n){n=+n||0;const sc=(STATE&&STATE.scale)||'auto';
+  if(sc!=='auto'&&_SCALE[sc]){const[div,suf]=_SCALE[sc];const q=n/div;const a=Math.abs(q);return(a>=100?q.toFixed(0):a>=10?q.toFixed(1):q.toFixed(2))+suf;}
+  const a=Math.abs(n);return a>=1e12?(n/1e12).toFixed(1)+'T':a>=1e9?(n/1e9).toFixed(1)+'B':a>=1e6?(n/1e6).toFixed(1)+'M':a>=1e3?(n/1e3).toFixed(1)+'k':String(Math.round(n));}
+const fmtK=n=>fmt(n);
+function download(name,text,mime){try{const b=new Blob([text],{type:mime||'text/plain;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);}catch(e){alert('Export failed: '+e);}}
+function toCSV(cols,rows){const q=v=>{if(v==null)v='';if(Array.isArray(v))v=v.length;v=String(v);return/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return'﻿'+[cols.map(q).join(',')].concat((rows||[]).map(r=>cols.map(c=>q(r[c])).join(','))).join('\r\n');}
 const fmtDur=s=>s==null?'–':s<60?s+'s':s<3600?Math.round(s/60)+'m':(s/3600).toFixed(1)+'h';
 const ago=ts=>{if(!ts)return'';let d=(Date.now()-(typeof ts==='number'&&ts<1e12?ts*1000:Date.parse(ts)||ts))/1000;if(typeof ts==='number'&&ts>1e12)d=(Date.now()-ts)/1000;return d<60?'just now':d<3600?Math.round(d/60)+'m ago':d<86400?Math.round(d/3600)+'h ago':Math.round(d/86400)+'d ago';};
 const cssv=v=>getComputedStyle(document.body).getPropertyValue(v).trim();
@@ -148,7 +172,40 @@ document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelect
 async function refresh(){await detect();await loadCore();render();}
 function render(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};
   ({overview:vOverview,claude:vClaude,cursor:vCursorViz,platforms:vPlatforms,provenance:vProvViz,topology:vTopoViz,ultracode:vUltraViz,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed,privacy:vPrivacy}[view]||vOverview)();
-  const ft=document.getElementById('appftr');if(ft)ft.innerHTML=footerHTML();}
+  const ft=document.getElementById('appftr');if(ft)ft.innerHTML=footerHTML();
+  renderCmdBar();}
+
+/* ---------- command bar (sticky control-center) ---------- */
+const RANGE_PRESETS=[['15m','15m'],['1h','1h'],['24h','24h'],['7d','7d'],['30d','30d'],['all','All']];
+const SCALES=['auto','K','M','B','T'];
+function renderCmdBar(){const bar=document.getElementById('cmdbar');if(!bar)return;
+  const sessOpen=!!window._lastSession;
+  bar.innerHTML=
+   `<span class="cb-lbl">Range</span>`+
+   `<select id="cbRange" onchange="setRange(this.value);renderCmdBar()">${RANGE_PRESETS.map(([v,l])=>`<option value="${v}" ${v===RANGE?'selected':''}>${l}</option>`).join('')}</select>`+
+   `<span class="cb-lbl" style="margin-left:8px">Scale</span>`+
+   `<span class="seg">${SCALES.map(s=>`<button class="${(STATE.scale||'auto')===s?'on':''}" onclick="setScale('${s}')">${s==='auto'?'Auto':s}</button>`).join('')}</span>`+
+   `<div class="spacer" style="flex:1"></div>`+
+   `<div class="menuwrap"><button class="btn" onclick="toggleExportMenu(event)">⤓ Export ▾</button>`+
+   `<div class="menu" id="exportMenu">`+
+     `<div class="msec">${esc(EXP&&EXP.name?EXP.name:'sessions')} dataset</div>`+
+     `<button class="mi" onclick="exportDataset('csv')">This dataset → CSV</button>`+
+     `<button class="mi" onclick="exportDataset('json')">This dataset → JSON</button>`+
+     `<div class="msec">Session</div>`+
+     `<button class="mi" ${sessOpen?'':'disabled'} onclick="exportSessionLog()">Session log → JSON${sessOpen?'':' (open a session)'}</button>`+
+   `</div></div>`;}
+function setScale(s){STATE.scale=s;render();}
+function toggleExportMenu(e){if(e)e.stopPropagation();const mn=document.getElementById('exportMenu');if(mn)mn.classList.toggle('open');}
+document.addEventListener('click',e=>{const mn=document.getElementById('exportMenu');if(mn&&mn.classList.contains('open')&&!e.target.closest('.menuwrap'))mn.classList.remove('open');});
+async function exportDataset(kind){const mn=document.getElementById('exportMenu');if(mn)mn.classList.remove('open');
+  const name=(EXP&&EXP.name)?EXP.name:'sessions';let d;try{d=await ds(name);}catch(e){alert('Could not load dataset: '+name);return;}
+  const cols=d.columns||[],rows=d.rows||[];const stamp=new Date().toISOString().slice(0,10);
+  if(kind==='csv')download(`agentlens-${name}-${stamp}.csv`,toCSV(cols,rows),'text/csv;charset=utf-8');
+  else download(`agentlens-${name}-${stamp}.json`,JSON.stringify(rows,null,2),'application/json');}
+function exportSessionLog(){const mn=document.getElementById('exportMenu');if(mn)mn.classList.remove('open');
+  const s=window._lastSession;if(!s){alert('Open a session first.');return;}
+  const sid=((s.meta&&s.meta.sessionId)||'session').slice(0,12);
+  download(`agentlens-session-${sid}.json`,JSON.stringify(s,null,2),'application/json');}
 
 function shell(title,sub,actions){return `<div class="head"><div><h1>${title}</h1><p class="sub">${sub||''}</p></div><div class="spacer"></div>${actions||''}</div><div id="banner" class="banner"></div>`;}
 function kpi(v,l,d){return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div>${d?`<div class="d">${d}</div>`:''}</div>`;}
@@ -195,9 +252,13 @@ function provBar(id,pv,contrib){const el=document.getElementById(id);if(!el)retu
   el.innerHTML=`<div class="provbar">${ks.map(k=>`<div title="${PROV[k][2]} ${pv[k]||0}" style="width:${(pv[k]||0)/tot*100}%;background:${PROV[k][1]}"></div>`).join('')}</div>
   <div class="provleg">${ks.map(k=>`<b onclick='drillProv(${JSON.stringify(k)})'><span class="dotc" style="background:${PROV[k][1]}"></span>${PROV[k][2]} <span class="muted">${Math.round((pv[k]||0)/tot*100)}% (${pv[k]||0})</span></b>`).join('')}</div>`;
   el._contrib=contrib;window._contrib=contrib;}
-function drillProv(k){const c=(window._contrib||{})[k]||[];openDrawer(PROV[k][2]+' — contributors',
-  c.length?`<div class="list">${c.map(x=>`<div class="it"><span class="chip ${k}">${k}</span><span class="nm">${esc(x.name)}</span> ${x.subtype?`<span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span>`:''}<span class="rt">${fmtK(x.count)} calls</span></div>`).join('')}</div>`
-  :'<p class="dim">No contributors in this category.</p>');}
+function drillProv(k){const c=(window._contrib||{})[k]||[];window._provCat=k;
+  openDrawer(PROV[k][2]+' — contributors <span class="tag" style="color:var(--dim)">click a contributor to see its sessions</span>',
+  c.length?`<div class="list">${c.map((x,i)=>`<div class="it clk" onclick="drillProvContributor(${i})"><span class="chip ${k}">${k}</span><span class="nm">${esc(x.name)}</span> ${x.subtype?`<span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span>`:''}<span class="rt">${fmtK(x.count)} calls</span></div>`).join('')}</div>`
+  :'<p class="dim">No contributors in this category.</p>');window._provList=c;}
+function drillProvContributor(i){const k=window._provCat,x=(window._provList||[])[i];if(!x)return;
+  drillSessions(`${esc(x.name)} <span class="chip ${k}">${esc(k)}</span> <span class="tag" style="color:var(--dim)">sessions using this — click to open logs</span>`,
+    s=>sessUsesName(s,x.name),()=>drillProv(k));}
 
 function vClaude(){const m=document.getElementById('main');const cl=SESS.filter(s=>(s.source==='claude-code'||s.source==='cowork')&&inRange(s.lastTs));
   const tot=cl.reduce((a,s)=>a+(+s.tokensTotal||0),0),tools=cl.reduce((a,s)=>a+(+s.toolCalls||0),0),subs=cl.reduce((a,s)=>a+(+s.subagentFiles||0),0),live=cl.filter(s=>s.live).length;
@@ -352,9 +413,9 @@ function resetDash(){if(confirm('Remove all widgets?')){CONFIG.dashboards=[{id:'
 function persist(){post('/api/config',CONFIG);}
 
 let RANGE='all';
-function setRange(v){RANGE=v;DSCACHE={};render();}
-function inRange(ts){if(RANGE==='all')return true;if(!ts)return false;const ms=typeof ts==='number'?(ts<1e12?ts*1000:ts):(Date.parse(ts)||0);const map={'24h':864e5,'7d':6048e5,'30d':2592e6};return (Date.now()-ms)<=(map[RANGE]||Infinity);}
-const RANGELBL={all:'all time','24h':'last 24h','7d':'last 7 days','30d':'last 30 days'};
+function setRange(v){RANGE=v;DSCACHE={};const r1=document.getElementById('range');if(r1)r1.value=v;const r2=document.getElementById('cbRange');if(r2)r2.value=v;render();}
+function inRange(ts){if(RANGE==='all')return true;if(!ts)return false;const ms=typeof ts==='number'?(ts<1e12?ts*1000:ts):(Date.parse(ts)||0);const map={'15m':9e5,'1h':36e5,'24h':864e5,'7d':6048e5,'30d':2592e6};return (Date.now()-ms)<=(map[RANGE]||Infinity);}
+const RANGELBL={all:'all time','15m':'last 15m','1h':'last 1h','24h':'last 24h','7d':'last 7 days','30d':'last 30 days'};
 function footerHTML(){return `<div>© 2026 <b>Arkaya Venture Limited</b>, United Kingdom · AgentLens is licensed <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a> — attribution required, non-commercial. <a href="https://arkayaventure.com" target="_blank">arkayaventure.com</a></div><div class="dim">🛡️ Local-first · loopback-only · no telemetry — <b style="color:var(--green)">your data never leaves this machine</b>. <a onclick="document.querySelector('.nav[data-v=privacy]').click()">Privacy &amp; conformance →</a></div>`;}
 function vPrivacy(){const m=document.getElementById('main');const h=HEALTH||{};
   m.innerHTML=shell('Privacy & Conformance','How AgentLens handles your data — verified, not just promised.')+`
@@ -1324,36 +1385,40 @@ async function vTopoViz() {
 
   const main = document.getElementById('main');
   const hubs = main.querySelectorAll('.hub_tp');
+  window._topoOpen = function (key) {
+    const cat = cats.filter(function (c) { return c.key === key; })[0];
+    if (!cat) return;
+    window._topoCat = cat; window._topoItems = cat.items;
+    let body =
+      '<div style="color:var(--mut);font-size:13px;margin-bottom:12px">' +
+      fmtK(cat.items.length) + ' item' + (cat.items.length === 1 ? '' : 's') +
+      ' &middot; <span style="color:var(--dim)">click an item to see sessions that used it</span></div>';
+    if (cat.items.length === 0) {
+      body += '<div style="color:var(--mut)">Nothing here yet.</div>';
+    } else {
+      body += '<div style="display:flex;flex-direction:column;gap:7px">';
+      cat.items.forEach(function (it, j) {
+        let row =
+          '<div class="it clk" style="margin:0;justify-content:space-between" onclick="__topoDrill(' + j + ')">' +
+          '<span style="color:var(--txt);font-size:13px">' + esc(it.name) + '</span>';
+        if (key === 'mcp') {
+          row += '<span>' + chip_tp(it.subtype || 'unknown', clr_tp(it.subtype)) +
+            (it.category ? chip_tp(it.category, 'var(--mut)') : '') + '</span>';
+        }
+        row += '</div>';
+        body += row;
+      });
+      body += '</div>';
+    }
+    openDrawer(esc(cat.name), body);
+  };
   hubs.forEach(function (g) {
-    g.addEventListener('click', function () {
-      const key = g.getAttribute('data-cat');
-      const cat = cats.filter(function (c) { return c.key === key; })[0];
-      if (!cat) return;
-      let body =
-        '<div style="color:var(--mut);font-size:13px;margin-bottom:12px">' +
-        fmtK(cat.items.length) + ' item' + (cat.items.length === 1 ? '' : 's') + '</div>';
-      if (cat.items.length === 0) {
-        body += '<div style="color:var(--mut)">Nothing here yet.</div>';
-      } else {
-        body += '<div style="display:flex;flex-direction:column;gap:7px">';
-        cat.items.forEach(function (it) {
-          let row =
-            '<div style="display:flex;align-items:center;justify-content:space-between;' +
-            'padding:9px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px">' +
-            '<span style="color:var(--txt);font-size:13px">' + esc(it.name) + '</span>';
-          if (key === 'mcp') {
-            row += '<span>' + chip_tp(it.subtype || 'unknown', clr_tp(it.subtype)) +
-              (it.category ? chip_tp(it.category, 'var(--mut)') : '') + '</span>';
-          }
-          row += '</div>';
-          body += row;
-        });
-        body += '</div>';
-      }
-      openDrawer(esc(cat.name), body);
-    });
+    g.addEventListener('click', function () { window._topoOpen(g.getAttribute('data-cat')); });
   });
 }
+function __topoDrill(j){const cat=window._topoCat;const it=(window._topoItems||[])[j];if(!cat||!it)return;
+  drillSessions(`${esc(it.name)} <span class="tag" style="color:var(--dim)">sessions using this — click to open logs</span>`,
+    s=>sessUsesName(s,it.name),()=>window._topoOpen(cat.key));}
 
 function vFeed(){const m=document.getElementById('main');m.innerHTML=shell('AI Feed','Latest in AI — populated by your scheduled research loops.')+
   `<div class="card feed">${FEED.length?FEED.map(i=>`<div class="item"><div class="row"><span class="chip mcp">${esc(i.provider)}</span><span class="chip ${i.impact==='high'?'llm':i.impact==='medium'?'web':'loc'}">${esc(i.impact)}</span> <b>${esc(i.title)}</b><span class="dim" style="margin-left:auto">${esc(i.date||'')}</span></div><div class="muted" style="margin-top:4px">${esc(i.summary||'')} ${i.url?`· <a href="${esc(i.url)}" target="_blank">source ↗</a>`:''}</div></div>`).join(''):'<div class="empty">No feed items yet — the daily loop will populate this.</div>'}</div>`;}
@@ -1365,7 +1430,28 @@ function tableInto(host,cols,rows,fmt,onclick){const el=document.getElementById(
 function __rowclick(host,i){const el=document.getElementById(host);if(el&&el._onclick)el._onclick(el._rows[i]);}
 function openDrawer(title,html){document.getElementById('dtitle').innerHTML=title;document.getElementById('dbody').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('dbg').style.display='block';}
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('dbg').style.display='none';}
+/* ---------- multi-level drill: contributor/entity → sessions → logs ---------- */
+window._drillStack=[];
+function drillSessions(titleHTML,predicateFn,backFn){
+  const rows=(SESS||[]).filter(s=>{try{return inRange(s.lastTs)&&predicateFn(s);}catch(e){return false;}})
+    .sort((a,b)=>(+b.tokensTotal||0)-(+a.tokensTotal||0));
+  window._drillRows=rows;window._drillBack=backFn||null;
+  const back=backFn?`<div class="drill-back" onclick="(window._drillBack||function(){})()">← back</div>`:'';
+  const body=back+(rows.length
+    ?`<div class="list">${rows.map((r,i)=>`<div class="it clk" onclick="__drillOpen(${i})">
+        <span class="chip src">${esc(r.source||'')}</span>
+        <span class="nm">${esc(r.project||r.sessionId||'session')}</span>
+        ${r.live?'<span class="chip live">live</span>':''}
+        <span class="rt">${fmt(r.tokensTotal||0)} tok · ${Math.round((r.extPct||0)*100)}% ext · ${ago(r.lastTs)}</span>
+      </div>`).join('')}</div>`
+    :'<p class="dim">No sessions matched this item in the current range.</p>');
+  openDrawer(titleHTML,body);}
+function __drillOpen(i){const r=(window._drillRows||[])[i];if(r&&r.file)openSession(r.file);}
+function sessUsesName(s,name){if(!name)return false;const nl=String(name).toLowerCase();
+  if(Array.isArray(s.mcpServers)&&s.mcpServers.some(x=>String(x).toLowerCase()===nl||String(x).toLowerCase().includes(nl)))return true;
+  const bt=s.byTool||{};return Object.keys(bt).some(k=>{const kl=k.toLowerCase();return kl===nl||kl.includes(nl)||(kl.startsWith('mcp__')&&kl.split('__')[1]===nl);});}
 async function openSession(file){openDrawer('loading…','<p class="dim">parsing transcript…</p>');let d;try{d=await api('/api/session?file='+encodeURIComponent(file));}catch(e){openDrawer('Error','<p class="dim">Could not load.</p>');return;}
+  window._lastSession=d;renderCmdBar();
   const mm=d.meta;openDrawer(`Session ${esc((mm.sessionId||'').slice(0,8))} <span class="chip src">${esc(mm.source||'')}</span>`,
    `<div class="kpis">${kpi(mm.events,'Events')}${kpi(mm.toolCalls,'Tools')}${kpi(mm.subagentFiles,'Sub-agents')}${kpi(fmtK(mm.tokensTotal),'Tokens')}${kpi((mm.cacheHit*100||0).toFixed(0)+'%','Cache')}</div>
    <div class="card" style="margin-bottom:10px"><h3>Tools</h3><div class="list">${(d.tools||[]).map(t=>`<div class="it"><span class="chip ${t.origin}">${esc(t.origin)}</span><span class="nm">${esc(t.name)}</span><span class="rt">${t.count}× · ${fmtK(t.tokens)} tok</span></div>`).join('')}</div></div>
