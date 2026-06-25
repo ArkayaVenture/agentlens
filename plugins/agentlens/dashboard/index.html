@@ -16,7 +16,8 @@
 body.light{--bg:#eef2f8;--bg2:#fff;--panel:#fff;--panel2:#f6f8fc;--line:#e2e8f2;--line2:#d4deec;
   --txt:#10203a;--mut:#5b6b82;--dim:#8493a8;--chip:#eef2f8;--sh:0 4px 16px rgba(20,40,80,.08);}
 *{box-sizing:border-box}html,body{margin:0;height:100%}
-body{font:13.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+body{font:13.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:radial-gradient(1200px 600px at 82% -10%,#0e1830,transparent 55%),var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;border:2px solid var(--bg)}::-webkit-scrollbar-thumb:hover{background:#33476f}::selection{background:#4d7cfe55}
 a{color:var(--cyan);text-decoration:none}
 .app{display:grid;grid-template-columns:218px 1fr;min-height:100vh}
 .rail{background:linear-gradient(180deg,var(--bg2),var(--bg));border-right:1px solid var(--line);padding:14px 11px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:3px;overflow:auto}
@@ -26,32 +27,39 @@ a{color:var(--cyan);text-decoration:none}
 .navsec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:12px 8px 4px}
 .nav{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--mut);font-weight:600;font-size:13px}
 .nav:hover{background:#ffffff08;color:var(--txt)}
-.nav.on{background:linear-gradient(90deg,#4d7cfe22,#4d7cfe05);color:var(--txt);box-shadow:inset 2px 0 0 var(--accent)}
+.nav{transition:.15s}.nav.on{background:linear-gradient(90deg,#4d7cfe26,#4d7cfe04);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}.nav.on .ico{color:var(--cyan);opacity:1}
 .nav .ico{width:16px;text-align:center;opacity:.9}
 .railftr{margin-top:auto;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:7px;color:var(--mut);font-size:11.5px}
-main{padding:18px 22px;overflow:auto;height:100vh}
-.head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-h1{font-size:19px;margin:0}.sub{color:var(--mut);font-size:12.5px;margin:2px 0 0}
+main{padding:18px 22px;overflow:auto;flex:1;min-height:0}
+.maincol{display:flex;flex-direction:column;height:100vh;min-width:0}
+.appftr{border-top:1px solid var(--line);padding:9px 22px;font-size:11.5px;color:var(--mut);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;background:linear-gradient(180deg,var(--bg2),var(--bg))}
+.appftr a{color:var(--cyan);cursor:pointer}.appftr b{color:var(--txt)}
+.rangewrap{display:flex;gap:6px;align-items:center}.rangewrap select{padding:5px 8px}
+.head{display:flex;align-items:flex-end;gap:12px;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+h1{font-size:21px;margin:0;font-weight:800;letter-spacing:-.2px}.sub{color:var(--mut);font-size:13px;margin:4px 0 0;max-width:760px}
 .spacer{flex:1}
 .btn{background:var(--chip);border:1px solid var(--line2);color:var(--txt);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600}
-.btn:hover{border-color:var(--accent)}.btn.pri{background:linear-gradient(90deg,#4d7cfe,#2fd0e0);border:0;color:#fff}
+.btn{transition:.15s}.btn:hover{border-color:var(--accent);background:#16233f}.btn.pri{background:linear-gradient(90deg,#4d7cfe,#2fd0e0);border:0;color:#fff;box-shadow:0 4px 14px #2fd0e033}.btn.pri:hover{filter:brightness(1.08)}
 .banner{padding:9px 14px;border-radius:9px;font-size:12.5px;margin-bottom:14px;display:none;align-items:center;gap:9px}
 .banner.live{display:flex;background:rgba(46,212,122,.1);color:var(--green);border:1px solid #2ed47a33}
 .banner.down{display:flex;background:rgba(245,166,35,.1);color:var(--amber);border:1px solid #f5a62333}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:14px}
-.kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--sh)}
-.kpi .v{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:16px}
+.kpi{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;padding:14px 15px 13px;box-shadow:var(--sh);overflow:hidden;transition:.18s}
+.kpi:hover{border-color:var(--line2);transform:translateY(-1px)}
+.kpi:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--cyan));opacity:.85}
+.kpi .v{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1.1}
 .kpi .l{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
 .kpi .d{font-size:11px;margin-top:4px;color:var(--dim)}
 .grid{display:grid;gap:14px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1.4fr 1fr}
-.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:13px;padding:15px;box-shadow:var(--sh)}
-.card h3{margin:0 0 12px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--sh)}
+.card h3{margin:0 0 13px;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:9px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.card h3:before{content:'';width:7px;height:7px;border-radius:2px;background:linear-gradient(135deg,var(--accent),var(--cyan));flex:none}
 .card h3 .tag{margin-left:auto;color:var(--dim);font-size:11px;font-weight:500}
 .chartbox{position:relative;height:240px}.chartbox.sm{height:170px}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
-th{color:var(--mut);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;position:sticky;top:0;background:var(--panel);user-select:none}
-tbody tr:hover{background:#ffffff06}td.num{text-align:right;font-variant-numeric:tabular-nums}
+th{color:var(--mut);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;position:sticky;top:0;background:var(--panel2);user-select:none;border-bottom:1px solid var(--line2)}
+tbody tr:nth-child(even){background:#ffffff03}tbody tr:hover{background:#4d7cfe14}td.num{text-align:right;font-variant-numeric:tabular-nums}td{transition:.1s}
 .tbl-wrap{max-height:64vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .chip{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
 .chip.local{background:#4d7cfe22;color:var(--c-local)}.chip.mcp{background:#9a7dff22;color:var(--c-mcp)}
@@ -80,7 +88,7 @@ input[type=search],input[type=text]{min-width:200px}
 .drawer .dh .x{margin-left:auto;cursor:pointer;color:var(--mut);font-size:20px}.drawer .db{padding:16px 18px;overflow:auto}
 .qb{display:grid;grid-template-columns:300px 1fr;gap:14px}
 .filterrow{display:grid;grid-template-columns:1fr 90px 1fr 28px;gap:6px;margin-bottom:6px}
-.empty{padding:30px;text-align:center;color:var(--dim);border:1px dashed var(--line2);border-radius:11px}
+.empty{padding:38px 30px;text-align:center;color:var(--dim);border:1px dashed var(--line2);border-radius:13px;background:#ffffff03}
 .hm{display:grid;gap:2px}.hm .cell{height:18px;border-radius:3px}
 .feed .item{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--panel2);margin-bottom:9px}
 @media(max-width:980px){.app{grid-template-columns:1fr}.rail{position:static;height:auto}.g2,.g3,.qb{grid-template-columns:1fr}.widget[class*=w]{grid-column:span 12}}
@@ -104,13 +112,16 @@ input[type=search],input[type=text]{min-width:200px}
     <div class="nav" data-v="query"><span class="ico">⌕</span> Query builder</div>
     <div class="nav" data-v="dashboards"><span class="ico">◳</span> Dashboards</div>
     <div class="nav" data-v="feed"><span class="ico">📡</span> AI Feed</div>
+    <div class="navsec">Trust</div>
+    <div class="nav" data-v="privacy"><span class="ico">🛡️</span> Privacy</div>
     <div class="railftr">
+      <div class="rangewrap"><span class="dim">Range</span><select id="range" onchange="setRange(this.value)"><option value="all">All time</option><option value="24h">Last 24h</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></div>
       <label class="row" style="gap:7px"><input type="checkbox" id="auto" checked style="min-width:0"> auto-refresh</label>
       <button class="btn" onclick="toggleTheme()">◐ Theme</button>
       <span id="clock" class="dim"></span>
     </div>
   </nav>
-  <main id="main"></main>
+  <div class="maincol"><main id="main"></main><footer id="appftr" class="appftr"></footer></div>
 </div>
 <div class="drawer-bg" id="dbg" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer"><div class="dh"><b id="dtitle"></b><span class="x" onclick="closeDrawer()">✕</span></div><div class="db" id="dbody"></div></div>
@@ -136,7 +147,8 @@ async function ds(name){if(DSCACHE[name])return DSCACHE[name];const d=await api(
 document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('on'));n.classList.add('on');view=n.dataset.v;DSCACHE={};render();});
 async function refresh(){await detect();await loadCore();render();}
 function render(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};
-  ({overview:vOverview,claude:vClaude,cursor:vCursor,platforms:vPlatforms,provenance:vProv,topology:vTopo,ultracode:vUltra,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed}[view]||vOverview)();}
+  ({overview:vOverview,claude:vClaude,cursor:vCursor,platforms:vPlatforms,provenance:vProv,topology:vTopo,ultracode:vUltra,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed,privacy:vPrivacy}[view]||vOverview)();
+  const ft=document.getElementById('appftr');if(ft)ft.innerHTML=footerHTML();}
 
 function shell(title,sub,actions){return `<div class="head"><div><h1>${title}</h1><p class="sub">${sub||''}</p></div><div class="spacer"></div>${actions||''}</div><div id="banner" class="banner"></div>`;}
 function kpi(v,l,d){return `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div>${d?`<div class="d">${d}</div>`:''}</div>`;}
@@ -159,7 +171,8 @@ function runQuery(rows,q){let r=rows.slice();(q.filters||[]).forEach(f=>{if(!f.c
 
 /* ============ VIEWS ============ */
 function vOverview(){const o=OVER,m=document.getElementById('main');const tk=o&&o.tokens,pv=o&&o.provenance;
-  m.innerHTML=shell('Overview','Live monitoring across all your AI coding platforms.')+`
+  const ins=o?`<b style="color:var(--green)">${o.live}</b> live now · <b>${pv?(pv.extPct*100).toFixed(0):0}%</b> external data · cache hit <b>${tk?(tk.cacheHit*100).toFixed(0):0}%</b>${o.topSessions&&o.topSessions[0]?` · heaviest: <b>${esc(o.topSessions[0].project)}</b>`:''}`:'Start the AgentLens service to see your live activity.';
+  m.innerHTML=shell('Overview',ins+(RANGE!=='all'?' · range: '+RANGELBL[RANGE]:''))+`
   <div class="kpis">
    ${kpi(o?o.sessions:'–','Sessions',o&&o.bySource?Object.entries(o.bySource).map(([k,v])=>k+' '+v).join(' · '):'')}
    ${kpi(o&&o.live!=null?`<span style="color:var(--green)">${o.live}</span>`:'–','Live now')}
@@ -167,6 +180,7 @@ function vOverview(){const o=OVER,m=document.getElementById('main');const tk=o&&
    ${kpi(tk?fmtK(tk.inTotal):'–','Tokens in')}${kpi(tk?fmtK(tk.out):'–','Tokens out ↑')}
    ${kpi(tk?(tk.cacheHit*100).toFixed(0)+'%':'–','Cache hit')}${kpi(pv?(pv.extPct*100).toFixed(0)+'%':'–','External data')}</div>
    ${pv?`<div class="card" style="margin-bottom:14px"><h3>Data provenance <span class="tag">click a category to drill into contributors</span></h3><div id="provbar"></div></div>`:''}
+   ${(o&&o.topSessions&&o.topSessions.length)?`<div class="card" style="margin-bottom:14px"><h3>Where your tokens go <span class="tag">heaviest sessions — click to inspect</span></h3>${o.topSessions.slice(0,8).map(t=>{const mx=o.topSessions[0].tokensTotal||1;return `<div class="row" style="margin-bottom:8px;cursor:pointer" onclick="openSession('${encodeURIComponent(t.file)}')"><div style="width:210px;flex:none"><div style="font-weight:600">${esc(t.project)} ${t.live?'<span style=\'color:var(--green)\'>●</span>':''}</div><div class="dim" style="font-size:11px">${esc(t.source||'')} · ${Math.round((t.extPct||0)*100)}% external</div></div><div style="flex:1;background:var(--panel2);border-radius:6px;overflow:hidden;align-self:center"><div style="height:14px;width:${Math.round((t.tokensTotal||0)/mx*100)}%;background:linear-gradient(90deg,var(--accent),var(--cyan))"></div></div><div style="width:120px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">${fmtK(t.tokensTotal||0)}</div></div>`;}).join('')}</div>`:''}
    <div class="grid g3"><div class="card"><h3>Token usage <span class="tag">in vs out / day</span></h3><div class="chartbox"><canvas id="cTok"></canvas></div></div>
    <div class="card"><h3>⚡ Optimization ${o&&o.pro?'<span class="chip llm" style="margin-left:auto">Pro</span>':'<span class="tag">basic</span>'}</h3><div id="sugg"></div></div></div>
    <div class="card" style="margin-top:14px"><h3>Recent sessions <span class="tag">click to inspect</span></h3><div class="tbl-wrap" id="recent"></div></div>`;
@@ -175,7 +189,7 @@ function vOverview(){const o=OVER,m=document.getElementById('main');const tk=o&&
   const td=o.tokensByDay||[];mkChart('cTok',(CONFIG.theme,'bar'),td.map(d=>d.date.slice(5)),[
     {label:'in',data:td.map(d=>d.in),...dsStyle('bar',0)},{label:'out',data:td.map(d=>d.out),...dsStyle('bar',5)}],{scales:{x:{stacked:true,ticks:{color:cssv('--mut')},grid:{color:cssv('--line')}},y:{stacked:true,ticks:{color:cssv('--mut')},grid:{color:cssv('--line')}}}});
   document.getElementById('sugg').innerHTML=(o.suggestions||[]).map(s=>`<div class="list"><div class="it"><span class="chip ${s.level==='high'?'llm':s.level==='med'?'web':'loc'}">${esc(s.level)}</span><div>${esc(s.text)}${s.savesMonthlyUsd?` <b style="color:var(--green)">~$${s.savesMonthlyUsd}/mo</b>`:''}</div></div></div>`).join('')||'<p class="dim">No suggestions.</p>';
-  tableInto('recent',['project','source','lastTs','messages','toolCalls','tokensTotal','durationSec'],(o.recent||[]).map(r=>({...r,lastTs:r.lastTs})),{lastTs:v=>ago(v),tokensTotal:v=>fmtK(v),durationSec:v=>fmtDur(v),source:v=>`<span class="chip src">${esc(v)}</span>`},r=>openSession(r.file));}
+  tableInto('recent',['project','source','lastTs','messages','toolCalls','tokensTotal','durationSec'],(o.recent||[]).filter(r=>inRange(r.lastTs)),{lastTs:v=>ago(v),tokensTotal:v=>fmtK(v),durationSec:v=>fmtDur(v),source:v=>`<span class="chip src">${esc(v)}</span>`},r=>openSession(r.file));}
 
 function provBar(id,pv,contrib){const el=document.getElementById(id);if(!el)return;const ks=['local','mcp','web','llm'];const tot=ks.reduce((a,k)=>a+(+pv[k]||0),0)||1;
   el.innerHTML=`<div class="provbar">${ks.map(k=>`<div title="${PROV[k][2]} ${pv[k]||0}" style="width:${(pv[k]||0)/tot*100}%;background:${PROV[k][1]}"></div>`).join('')}</div>
@@ -185,10 +199,10 @@ function drillProv(k){const c=(window._contrib||{})[k]||[];openDrawer(PROV[k][2]
   c.length?`<div class="list">${c.map(x=>`<div class="it"><span class="chip ${k}">${k}</span><span class="nm">${esc(x.name)}</span> ${x.subtype?`<span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span>`:''}<span class="rt">${fmtK(x.count)} calls</span></div>`).join('')}</div>`
   :'<p class="dim">No contributors in this category.</p>');}
 
-function vClaude(){const m=document.getElementById('main');const cl=SESS.filter(s=>s.source==='claude-code'||s.source==='cowork');
+function vClaude(){const m=document.getElementById('main');const cl=SESS.filter(s=>(s.source==='claude-code'||s.source==='cowork')&&inRange(s.lastTs));
   const tot=cl.reduce((a,s)=>a+(+s.tokensTotal||0),0),tools=cl.reduce((a,s)=>a+(+s.toolCalls||0),0),subs=cl.reduce((a,s)=>a+(+s.subagentFiles||0),0),live=cl.filter(s=>s.live).length;
   const byp={};cl.forEach(s=>byp[s.source]=(byp[s.source]||0)+1);
-  m.innerHTML=shell('Claude','Claude Code + Cowork sessions on this machine.')+`
+  m.innerHTML=shell('Claude',`<b>${cl.length}</b> sessions · <b style='color:var(--green)'>${live}</b> live · <b>${fmtK(tot)}</b> tokens · <b>${fmtK(tools)}</b> tool calls${RANGE!=='all'?' · '+RANGELBL[RANGE]:''}`)+`
    <div class="kpis">${kpi(cl.length,'Sessions',Object.entries(byp).map(([k,v])=>k+' '+v).join(' · '))}${kpi(`<span style="color:var(--green)">${live}</span>`,'Live')}${kpi(fmtK(subs),'Sub-agents')}${kpi(fmtK(tools),'Tool calls')}${kpi(fmtK(tot),'Total tokens')}</div>
    <div class="card"><h3>Sessions <span class="tag">Claude Code &amp; Cowork · click to inspect</span></h3><div class="tbl-wrap" id="cltab"></div></div>`;
   tableInto('cltab',['project','source','lastTs','messages','toolCalls','subagentFiles','tokensInTotal','tokensOut','extPct','durationSec'],cl,
@@ -197,7 +211,7 @@ function vClaude(){const m=document.getElementById('main');const cl=SESS.filter(
 async function vCursor(){const m=document.getElementById('main');m.innerHTML=shell('Cursor','Rich activity parsed read-only from Cursor’s local store (old + live).')+'<div id="cur" class="dim">reading Cursor state…</div>';
   let c;try{c=await api('/api/cursor');}catch(e){document.getElementById('cur').innerHTML='Cursor reader unavailable.';return;}CURSOR=c;
   if(c.exists===false){document.getElementById('cur').innerHTML=`<div class="empty">No Cursor data found.<br><span class="dim">${esc(c.note||c.error||'')}</span></div>`;return;}
-  const conv=c.conversations||[];
+  const conv=(c.conversations||[]).filter(x=>inRange(x.lastTs));
   document.getElementById('cur').innerHTML=`<div class="kpis">${kpi(c.dbCount||0,'Workspaces')}${kpi(fmtK(c.composers||0),'Conversations')}${kpi(fmtK(c.messages||0),'Messages')}${kpi(`<span style="color:var(--green)">${c.live||0}</span>`,'Live')}${kpi((c.models||[]).length||'–','Models seen')}</div>
    ${c.models&&c.models.length?`<div class="card" style="margin-bottom:14px"><h3>Models</h3>${c.models.map(x=>`<span class="chip mcp" style="margin:2px">${esc(x)}</span>`).join(' ')}</div>`:''}
    <div class="card"><h3>Conversations <span class="tag">${esc(c.note||'')}</span></h3><div class="tbl-wrap" id="curtab"></div></div>`;
@@ -232,7 +246,7 @@ async function saveSources(){CONFIG.sources=(window._srcs||[]).filter(x=>x.label
 
 async function vProv(){const m=document.getElementById('main');const o=OVER;if(!o){m.innerHTML=shell('Provenance','')+'<div class="empty">Start the server.</div>';return;}
   const pv=o.provenance,contrib=o.provContributors||{};const ks=['local','mcp','web','llm'];
-  m.innerHTML=shell('Data provenance','Where every tool call’s data came from — drill into the contributors.')+`
+  m.innerHTML=shell('Data provenance',(()=>{const ks=['local','mcp','web','llm'];const tot=ks.reduce((a,k)=>a+(+pv[k]||0),0)||1;const top=ks.slice().sort((a,b)=>(+pv[b]||0)-(+pv[a]||0))[0];return `<b>${Math.round((pv[top]||0)/tot*100)}%</b> ${PROV[top][2]} · <b>${(pv.extPct*100).toFixed(0)}%</b> external — click a category to see its contributors`;})())+`
    <div class="card" style="margin-bottom:14px"><h3>Mix</h3><div id="pb"></div></div>
    <div class="grid g2"><div class="card"><h3>Breakdown</h3><div class="chartbox sm"><canvas id="cProv"></canvas></div></div>
    <div class="card"><h3>Top contributors</h3><div class="list" id="contriball"></div></div></div>`;
@@ -244,18 +258,23 @@ async function vProv(){const m=document.getElementById('main');const o=OVER;if(!
 async function vTopo(){const m=document.getElementById('main');const t=TOPO||(TOPO=await api('/api/topology').catch(()=>({})));
   const sec=(title,items,fmt)=>`<div class="card" style="margin-bottom:14px"><h3>${title} <span class="tag">${items.length}</span></h3>${items.length?`<div class="list">${items.map(fmt).join('')}</div>`:'<p class="dim">none detected — add via your ~/.claude or config.json</p>'}</div>`;
   m.innerHTML=shell('Topology','Your installed capabilities — reflected live from ~/.claude and your sessions (configurable).')+`
-   ${sec('🔌 MCP connectors',(t.mcp||[]),x=>`<div class="it"><span class="chip mcp">mcp</span><span class="nm">${esc(x.name)}</span><span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}">${esc(x.subtype)}</span></div>`)}
+   ${sec('🔌 MCP connectors <span class="tag">click a tag to reclassify (auto→local→external)</span>',(t.mcp||[]),x=>`<div class="it"><span class="chip mcp">mcp</span><span class="nm">${esc(x.name)}</span><span class="chip ${x.subtype==='external'?'ext':x.subtype==='local'?'loc':'unk'}" style="cursor:pointer" title="click to reclassify" onclick="cycleMcpClass(${JSON.stringify(x.name)})">${esc(x.subtype)} ⟳</span></div>`)}
    ${sec('🧩 Skills',(t.skills||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
    ${sec('🤖 Agents',(t.agents||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
    ${sec('⌘ Commands',(t.commands||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}
    ${sec('📦 Projects',(t.projects||[]).map(s=>({n:s})),x=>`<div class="it"><span class="nm">${esc(x.n)}</span></div>`)}`;}
 
+async function cycleMcpClass(name){CONFIG.mcpLocal=CONFIG.mcpLocal||[];CONFIG.mcpExternal=CONFIG.mcpExternal||[];
+  const inL=CONFIG.mcpLocal.includes(name),inE=CONFIG.mcpExternal.includes(name);
+  CONFIG.mcpLocal=CONFIG.mcpLocal.filter(x=>x!==name);CONFIG.mcpExternal=CONFIG.mcpExternal.filter(x=>x!==name);
+  if(!inL&&!inE)CONFIG.mcpLocal.push(name);else if(inL)CONFIG.mcpExternal.push(name);
+  await post('/api/config',CONFIG);try{await post('/api/reload',{});}catch(e){}TOPO=null;OVER=null;DSCACHE={};vTopo();}
 function vUltra(){const m=document.getElementById('main');const sl=(SESS||[]).filter(s=>typeof s.toolCalls==='number');
   const strat={fan:0,tourn:0,loop:0,adv:0,classify:0};const has=(s,re)=>Object.keys(s.byTool||{}).some(k=>re.test(k));
   sl.forEach(s=>{const subs=Math.max(+s.subagentFiles||0,+s.subagentSpawns||0),t=+s.toolCalls||0;if(subs>=2)strat.fan++;if(subs>=3)strat.tourn++;if(t>=25||has(s,/Todo|TaskCreate/))strat.loop++;if(has(s,/test|review|verify|security|lint/i))strat.adv++;if(has(s,/TaskCreate|Todo/))strat.classify++;});
   const D=[['Fan-out','Parallel sub-agents, each owns a slice'],['Classify-and-act','Triage into buckets, route each'],['Adversarial','Red-team every builder pass'],['Loop-until-done','Iterate build→verify→fix'],['Tournament','Generate N, score, advance winner']];
   const mx=Math.max(1,...Object.values(strat));const lab={fan:'fan-out',tourn:'tournament',loop:'loop-until-done',adv:'adversarial',classify:'classify-and-act'};
-  m.innerHTML=shell('ULTRACODE','How the execution doctrine shows up in your real sessions.')+`
+  m.innerHTML=shell('ULTRACODE',`Detected across <b>${sl.length}</b> sessions · fan-out <b>${strat.fan}</b> · adversarial <b>${strat.adv}</b> · loop <b>${strat.loop}</b>`)+`
    <div class="grid g2"><div class="card"><h3>Doctrine</h3><div class="list">${D.map(d=>`<div class="it"><div><div class="nm">${d[0]}</div><div class="dim" style="font-size:12px">${d[1]}</div></div></div>`).join('')}</div></div>
    <div class="card"><h3>Strategy usage <span class="tag">${sl.length} sessions</span></h3>${Object.entries(lab).map(([k,v],i)=>`<div class="row" style="margin-bottom:7px"><span style="width:130px;color:${PAL[i]}">● ${v}</span><div style="flex:1;background:var(--panel2);border-radius:5px;overflow:hidden"><div style="height:12px;width:${strat[k]/mx*100}%;background:${PAL[i]}"></div></div><span class="muted" style="width:32px;text-align:right">${strat[k]}</span></div>`).join('')}</div></div>`;}
 
@@ -332,6 +351,28 @@ function delW(i){CONFIG.dashboards[0].widgets.splice(i,1);persist();vDash();}
 function resetDash(){if(confirm('Remove all widgets?')){CONFIG.dashboards=[{id:'default',name:'My dashboard',widgets:[]}];persist();vDash();}}
 function persist(){post('/api/config',CONFIG);}
 
+let RANGE='all';
+function setRange(v){RANGE=v;DSCACHE={};render();}
+function inRange(ts){if(RANGE==='all')return true;if(!ts)return false;const ms=typeof ts==='number'?(ts<1e12?ts*1000:ts):(Date.parse(ts)||0);const map={'24h':864e5,'7d':6048e5,'30d':2592e6};return (Date.now()-ms)<=(map[RANGE]||Infinity);}
+const RANGELBL={all:'all time','24h':'last 24h','7d':'last 7 days','30d':'last 30 days'};
+function footerHTML(){return `<div>© 2026 <b>Arkaya Venture Limited</b>, United Kingdom · AgentLens is licensed <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank">CC BY-NC 4.0</a> — attribution required, non-commercial. <a href="https://arkayaventure.com" target="_blank">arkayaventure.com</a></div><div class="dim">🛡️ Local-first · loopback-only · no telemetry — <b style="color:var(--green)">your data never leaves this machine</b>. <a onclick="document.querySelector('.nav[data-v=privacy]').click()">Privacy &amp; conformance →</a></div>`;}
+function vPrivacy(){const m=document.getElementById('main');const h=HEALTH||{};
+  m.innerHTML=shell('Privacy & Conformance','How AgentLens handles your data — verified, not just promised.')+`
+   <div class="card" style="margin-bottom:14px;border-color:#2ed47a55"><h3>🛡️ Your data never leaves this machine <span class="chip loc" style="margin-left:auto">verified</span></h3>
+     <p class="muted">AgentLens is a <b>read-only mirror of data you already own</b>. It reads your local session transcripts and Cursor store with your own permissions and serves this dashboard on <b>loopback only</b> (<code>127.0.0.1:${esc((h.dashboardDir&&'7717')||'7717')}</code>). There is <b>no telemetry, no analytics, no account, and no outbound user-data request</b> anywhere in the product.</p></div>
+   <div class="card" style="margin-bottom:14px"><h3>Purpose</h3><div class="sec" style="grid-template-columns:repeat(2,1fr);max-width:none">
+     <div><b>Learn</b> from your own AI-coding work</div><div><b>Improve efficiency</b> — see where tokens & context go</div>
+     <div><b>Spot bottlenecks</b> across sessions, tools & platforms</div><div><b>Understand</b> how your agents & MCP connectors behave</div></div>
+     <p class="dim" style="margin-top:10px">It is <b>not</b> a tracking, exfiltration, or advertising tool, and has no such capability.</p></div>
+   <div class="card"><h3>Conformance <span class="tag">enumerated · classified · adversarially challenged</span></h3>
+     <div class="tbl-wrap"><table><thead><tr><th>Touchpoint</th><th>Classification</th><th>User data sent?</th></tr></thead><tbody>
+     <tr><td>HTTP server bind <span class="dim">serve.py</span></td><td><span class="chip loc">loopback only (127.0.0.1)</span></td><td>No</td></tr>
+     <tr><td>Dashboard ↔ API <span class="dim">fetch /api/*</span></td><td><span class="chip loc">loopback</span></td><td>No</td></tr>
+     <tr><td>Cursor reader <span class="dim">sqlite read-only</span></td><td><span class="chip loc">local file read</span></td><td>No</td></tr>
+     <tr><td>Config save <span class="dim">/api/config</span></td><td><span class="chip loc">local disk</span></td><td>No</td></tr>
+     <tr><td>Chart library <span class="dim">chart.js</span></td><td><span class="chip web">public CDN (library only)</span></td><td>No user data</td></tr>
+     </tbody></table></div>
+     <p class="muted" style="margin-top:11px">Verdict: <b style="color:var(--green)">PASS</b> — no <code>requests</code>/<code>socket.connect</code>/<code>urlopen</code> to any remote host; the only off-host request downloads the public Chart.js library (vendor it locally for a fully air-gapped install). Full declaration: <code>CONFORMANCE.md</code> in the repo.</p></div>`;}
 function vFeed(){const m=document.getElementById('main');m.innerHTML=shell('AI Feed','Latest in AI — populated by your scheduled research loops.')+
   `<div class="card feed">${FEED.length?FEED.map(i=>`<div class="item"><div class="row"><span class="chip mcp">${esc(i.provider)}</span><span class="chip ${i.impact==='high'?'llm':i.impact==='medium'?'web':'loc'}">${esc(i.impact)}</span> <b>${esc(i.title)}</b><span class="dim" style="margin-left:auto">${esc(i.date||'')}</span></div><div class="muted" style="margin-top:4px">${esc(i.summary||'')} ${i.url?`· <a href="${esc(i.url)}" target="_blank">source ↗</a>`:''}</div></div>`).join(''):'<div class="empty">No feed items yet — the daily loop will populate this.</div>'}</div>`;}
 

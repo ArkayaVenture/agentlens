@@ -70,6 +70,8 @@ def _envset(name):
 # Configure which MCP servers count as local vs external (substring match). Default: unknown.
 MCP_LOCAL = _envset("AGENTLENS_MCP_LOCAL")
 MCP_EXTERNAL = _envset("AGENTLENS_MCP_EXTERNAL")
+MCP_LOCAL_C = set()   # from config.json mcpLocal (refreshed on reload)
+MCP_EXTERNAL_C = set()  # from config.json mcpExternal
 # Generic public web/data MCP vendors → treated as external MCP unless overridden.
 WEB_MCP = _envset("AGENTLENS_WEB_MCP") or {"tavily", "context7", "fetch", "brave", "exa", "firecrawl", "serper"}
 # Public LLM vendors (name substring -> display label). Identifies external-LLM contributors.
@@ -87,9 +89,9 @@ def llm_vendor(s):
     return None
 def mcp_subtype(server):
     s = (server or "").lower()
-    if any(x in s for x in MCP_LOCAL):
+    if s in MCP_LOCAL_C or any(x in s for x in MCP_LOCAL):
         return "local"
-    if any(x in s for x in MCP_EXTERNAL) or s in WEB_MCP or any(x in s for x in WEB_MCP):
+    if s in MCP_EXTERNAL_C or any(x in s for x in MCP_EXTERNAL) or s in WEB_MCP or any(x in s for x in WEB_MCP):
         return "external"
     return "unknown"
 
@@ -546,9 +548,12 @@ def save_config(cfg):
 def _apply_config_sources():
     """Rebuild SOURCES from the built-in base + user-configured roots (config.json).
     Called at startup AND on /api/reload, so adding/removing sources takes effect live."""
-    global SOURCES
+    global SOURCES, MCP_LOCAL_C, MCP_EXTERNAL_C
+    cfg = load_config()
+    MCP_LOCAL_C = set(str(x).strip().lower() for x in (cfg.get("mcpLocal") or []) if str(x).strip())
+    MCP_EXTERNAL_C = set(str(x).strip().lower() for x in (cfg.get("mcpExternal") or []) if str(x).strip())
     rebuilt = [dict(x) for x in BASE_SOURCES]
-    for sc in (load_config().get("sources") or []):
+    for sc in (cfg.get("sources") or []):
         lbl = (sc.get("label") or "").strip(); root = sc.get("root")
         if not lbl or not root:
             continue
