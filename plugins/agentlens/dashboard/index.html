@@ -147,7 +147,7 @@ async function ds(name){if(DSCACHE[name])return DSCACHE[name];const d=await api(
 document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('on'));n.classList.add('on');view=n.dataset.v;DSCACHE={};render();});
 async function refresh(){await detect();await loadCore();render();}
 function render(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});charts={};
-  ({overview:vOverview,claude:vClaude,cursor:vCursor,platforms:vPlatforms,provenance:vProv,topology:vTopo,ultracode:vUltra,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed,privacy:vPrivacy}[view]||vOverview)();
+  ({overview:vOverview,claude:vClaude,cursor:vCursorViz,platforms:vPlatforms,provenance:vProvViz,topology:vTopoViz,ultracode:vUltraViz,explore:vExplore,query:vQuery,dashboards:vDash,feed:vFeed,privacy:vPrivacy}[view]||vOverview)();
   const ft=document.getElementById('appftr');if(ft)ft.innerHTML=footerHTML();}
 
 function shell(title,sub,actions){return `<div class="head"><div><h1>${title}</h1><p class="sub">${sub||''}</p></div><div class="spacer"></div>${actions||''}</div><div id="banner" class="banner"></div>`;}
@@ -373,6 +373,988 @@ function vPrivacy(){const m=document.getElementById('main');const h=HEALTH||{};
      <tr><td>Chart library <span class="dim">chart.js</span></td><td><span class="chip web">public CDN (library only)</span></td><td>No user data</td></tr>
      </tbody></table></div>
      <p class="muted" style="margin-top:11px">Verdict: <b style="color:var(--green)">PASS</b> — no <code>requests</code>/<code>socket.connect</code>/<code>urlopen</code> to any remote host; the only off-host request downloads the public Chart.js library (vendor it locally for a fully air-gapped install). Full declaration: <code>CONFORMANCE.md</code> in the repo.</p></div>`;}
+/* ===== animated visualizations (ULTRACODE) ===== */
+async function vProvViz() {
+  const main = document.getElementById('main');
+  let o;
+  try {
+    o = await api('/api/overview');
+  } catch (e) {
+    o = null;
+  }
+
+  if (!o || !o.provenance) {
+    main.innerHTML = shell('Data provenance', '<span style="color:var(--mut)">no data</span>') +
+      '<div style="display:flex;align-items:center;justify-content:center;height:360px;color:var(--mut);' +
+      'font-size:14px;letter-spacing:.3px">Provenance telemetry unavailable.</div>';
+    return;
+  }
+
+  try { if (typeof window !== 'undefined') window.__pvLastOverview = o; } catch (e) {}
+
+  const p = o.provenance;
+  const cats = [
+    { key: 'local', label: 'LOCAL', color: '#4d7cfe' },
+    { key: 'mcp', label: 'MCP', color: '#9a7dff' },
+    { key: 'web', label: 'WEB', color: '#f5a623' },
+    { key: 'llm', label: 'LLM', color: '#f0506e' }
+  ];
+
+  const counts = cats.map(c => Math.max(0, Number(p[c.key]) || 0));
+  const total = counts.reduce((a, b) => a + b, 0);
+
+  let domIdx = 0;
+  for (let i = 1; i < counts.length; i++) if (counts[i] > counts[domIdx]) domIdx = i;
+  const domPct = total > 0 ? _pvPct(counts[domIdx], total) : 0;
+  const extPct = (p.extPct != null) ? Math.round(p.extPct * (p.extPct <= 1 ? 100 : 1)) : null;
+
+  const sub =
+    '<span style="color:var(--mut)">Dominant </span>' +
+    '<b style="color:' + cats[domIdx].color + '">' + cats[domIdx].label + '</b>' +
+    '<span style="color:var(--mut)"> &middot; ' + domPct + '% of ' + (typeof fmtK === 'function' ? fmtK(total) : total) + ' calls</span>' +
+    (extPct != null ? '<span style="color:var(--mut)"> &middot; external </span><b style="color:var(--amber)">' + extPct + '%</b>' : '');
+
+  const W = 1000, H = 440;
+  const cx = W / 2, cy = H / 2;
+  const orbit = 300;
+  const maxR = total > 0 ? Math.max.apply(null, counts) : 1;
+  const rMin = 30, rMax = 78;
+
+  const positions = [
+    { x: cx - orbit, y: cy - 120 },
+    { x: cx + orbit, y: cy - 120 },
+    { x: cx - orbit, y: cy + 120 },
+    { x: cx + orbit, y: cy + 120 }
+  ];
+
+  const coreR = 46;
+  let defs = '', glows = '', arcs = '', orbsSvg = '';
+
+  cats.forEach((c, i) => {
+    const cnt = counts[i];
+    const pos = positions[i];
+    const r = maxR > 0 ? rMin + (rMax - rMin) * (cnt / maxR) : rMin;
+    const pct = total > 0 ? _pvPct(cnt, total) : 0;
+    const id = 'pv_' + c.key;
+
+    defs +=
+      '<radialGradient id="' + id + '_g" cx="38%" cy="35%" r="75%">' +
+      '<stop offset="0%" stop-color="' + c.color + '" stop-opacity="0.95"/>' +
+      '<stop offset="55%" stop-color="' + c.color + '" stop-opacity="0.55"/>' +
+      '<stop offset="100%" stop-color="' + c.color + '" stop-opacity="0.18"/>' +
+      '</radialGradient>';
+
+    const mx = (cx + pos.x) / 2;
+    const my = (cy + pos.y) / 2 + (i % 2 === 0 ? -34 : 34);
+    const pathId = id + '_path';
+    const d = 'M ' + cx + ' ' + cy + ' Q ' + mx + ' ' + my + ' ' + pos.x + ' ' + pos.y;
+
+    arcs +=
+      '<path id="' + pathId + '" d="' + d + '" fill="none" stroke="' + c.color + '" ' +
+      'stroke-width="1.4" stroke-opacity="0.22"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + c.color + '" stroke-width="2.2" ' +
+      'stroke-opacity="0.85" stroke-linecap="round" stroke-dasharray="3 16" ' +
+      'class="pv-flow" style="animation-delay:' + (i * 0.4) + 's"/>';
+
+    for (let k = 0; k < 3; k++) {
+      const dur = (3.2 + i * 0.3).toFixed(2);
+      const begin = (-(k * (dur / 3))).toFixed(2);
+      arcs +=
+        '<circle r="2.6" fill="' + c.color + '" opacity="0.9">' +
+        '<animateMotion dur="' + dur + 's" begin="' + begin + 's" repeatCount="indefinite" ' +
+        'rotate="auto" keyPoints="1;0" keyTimes="0;1" calcMode="linear">' +
+        '<mpath href="#' + pathId + '"/></animateMotion>' +
+        '<animate attributeName="opacity" values="0;0.95;0" dur="' + dur + 's" ' +
+        'begin="' + begin + 's" repeatCount="indefinite"/></circle>';
+    }
+
+    glows +=
+      '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + (r + 16) + '" ' +
+      'fill="' + c.color + '" opacity="0.10">' +
+      '<animate attributeName="r" values="' + (r + 12) + ';' + (r + 22) + ';' + (r + 12) + '" ' +
+      'dur="' + (4 + i * 0.5) + 's" repeatCount="indefinite"/>' +
+      '<animate attributeName="opacity" values="0.06;0.16;0.06" dur="' + (4 + i * 0.5) + 's" ' +
+      'repeatCount="indefinite"/></circle>';
+
+    const labelY = pos.y - r - 14;
+    orbsSvg +=
+      '<g class="pv-orb" style="cursor:pointer" onclick="_pvDrill(\'' + c.key + '\',\'' + c.label + '\')">' +
+      '<circle cx="' + pos.x + '" cy="' + pos.y + '" r="' + r + '" fill="url(#' + id + '_g)" ' +
+      'stroke="' + c.color + '" stroke-width="1.5" stroke-opacity="0.7">' +
+      '<animate attributeName="r" values="' + r + ';' + (r + 4) + ';' + r + '" ' +
+      'dur="' + (3 + i * 0.4) + 's" repeatCount="indefinite"/></circle>' +
+      '<circle cx="' + (pos.x - r * 0.28) + '" cy="' + (pos.y - r * 0.3) + '" r="' + (r * 0.22) + '" ' +
+      'fill="#ffffff" opacity="0.18"/>' +
+      '<text x="' + pos.x + '" y="' + labelY + '" text-anchor="middle" ' +
+      'fill="' + c.color + '" font-size="13" font-weight="700" letter-spacing="1.5" ' +
+      'style="font-family:inherit">' + c.label + '</text>' +
+      '<text x="' + pos.x + '" y="' + (pos.y + 1) + '" text-anchor="middle" ' +
+      'fill="var(--txt)" font-size="' + Math.max(15, r * 0.32) + '" font-weight="700" ' +
+      'style="font-family:inherit">' + pct + '%</text>' +
+      '<text x="' + pos.x + '" y="' + (pos.y + r * 0.42 + 14) + '" text-anchor="middle" ' +
+      'fill="var(--mut)" font-size="11" style="font-family:inherit">' +
+      (typeof fmtK === 'function' ? fmtK(cnt) : cnt) + ' calls</text>' +
+      '</g>';
+  });
+
+  defs +=
+    '<radialGradient id="pv_core_g" cx="50%" cy="45%" r="65%">' +
+    '<stop offset="0%" stop-color="#eaf1ff" stop-opacity="0.95"/>' +
+    '<stop offset="40%" stop-color="var(--accent)" stop-opacity="0.85"/>' +
+    '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0.15"/>' +
+    '</radialGradient>';
+
+  const core =
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (coreR + 26) + '" fill="var(--accent)" opacity="0.08">' +
+    '<animate attributeName="r" values="' + (coreR + 20) + ';' + (coreR + 34) + ';' + (coreR + 20) + '" ' +
+    'dur="3.5s" repeatCount="indefinite"/>' +
+    '<animate attributeName="opacity" values="0.05;0.14;0.05" dur="3.5s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + coreR + '" fill="url(#pv_core_g)" ' +
+    'stroke="var(--accent)" stroke-width="2" stroke-opacity="0.8">' +
+    '<animate attributeName="r" values="' + coreR + ';' + (coreR + 3) + ';' + coreR + '" ' +
+    'dur="3.5s" repeatCount="indefinite"/></circle>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + (coreR + 10) + '" fill="none" ' +
+    'stroke="var(--cyan)" stroke-width="1.2" stroke-opacity="0.5" ' +
+    'stroke-dasharray="4 10">' +
+    '<animateTransform attributeName="transform" type="rotate" ' +
+    'from="0 ' + cx + ' ' + cy + '" to="360 ' + cx + ' ' + cy + '" ' +
+    'dur="22s" repeatCount="indefinite"/></circle>' +
+    '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle" fill="var(--txt)" ' +
+    'font-size="13" font-weight="700" letter-spacing="0.5" style="font-family:inherit">AgentLens</text>' +
+    '<text x="' + cx + '" y="' + (cy + 13) + '" text-anchor="middle" fill="var(--mut)" ' +
+    'font-size="10" letter-spacing="1.5" style="font-family:inherit">CORE</text>';
+
+  const svg =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H + '" ' +
+    'preserveAspectRatio="xMidYMid meet" style="display:block">' +
+    '<defs>' + defs + '</defs>' +
+    arcs + glows + core + orbsSvg +
+    '</svg>';
+
+  let legend = '<div style="display:flex;gap:26px;justify-content:center;flex-wrap:wrap;' +
+    'margin-top:6px;padding-top:14px;border-top:1px solid var(--line)">';
+  cats.forEach((c, i) => {
+    const pct = total > 0 ? _pvPct(counts[i], total) : 0;
+    legend +=
+      '<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut)">' +
+      '<span style="width:9px;height:9px;border-radius:50%;background:' + c.color + ';' +
+      'box-shadow:0 0 8px ' + c.color + '"></span>' +
+      '<span style="color:var(--txt);font-weight:600;letter-spacing:.5px">' + c.label + '</span>' +
+      '<span>' + pct + '%</span></div>';
+  });
+  legend += '</div>';
+
+  const style =
+    '<style>' +
+    '@keyframes pvDash{to{stroke-dashoffset:-380}}' +
+    '.pv-flow{stroke-dashoffset:0;animation:pvDash 6s linear infinite}' +
+    '.pv-orb:hover circle:first-of-type{stroke-opacity:1;filter:brightness(1.15)}' +
+    '</style>';
+
+  const container =
+    style +
+    '<div style="background:linear-gradient(160deg,var(--panel) 0%,var(--panel2) 100%);' +
+    'border:1px solid var(--line);border-radius:14px;padding:18px 14px 16px;' +
+    'box-shadow:inset 0 0 60px rgba(0,0,0,0.35)">' +
+    svg + legend +
+    '</div>';
+
+  main.innerHTML = shell('Data provenance', sub) + container;
+}
+
+function _pvPct(n, total) {
+  if (!total) return 0;
+  return Math.round((n / total) * 100);
+}
+
+function _pvDrill(key, label) {
+  let o = null;
+  try {
+    o = (typeof window !== 'undefined' && window.__pvLastOverview) ? window.__pvLastOverview : null;
+  } catch (e) { o = null; }
+
+  const render = function (list) {
+    let body = '';
+    if (!list || !list.length) {
+      body = '<div style="color:var(--mut);padding:18px 0;font-size:13px">No contributors recorded.</div>';
+    } else {
+      const max = Math.max.apply(null, list.map(function (x) { return Number(x.count) || 0; }));
+      body = '<div style="display:flex;flex-direction:column;gap:8px;padding-top:6px">';
+      list.forEach(function (it) {
+        const cnt = Number(it.count) || 0;
+        const w = max > 0 ? Math.round((cnt / max) * 100) : 0;
+        const st = it.subtype || 'unknown';
+        const chipColor = st === 'external' ? 'var(--amber)' : (st === 'local' ? 'var(--accent)' : 'var(--mut)');
+        body +=
+          '<div style="position:relative;border:1px solid var(--line);border-radius:10px;' +
+          'padding:10px 12px;background:var(--panel2);overflow:hidden">' +
+          '<div style="position:absolute;left:0;top:0;bottom:0;width:' + w + '%;' +
+          'background:linear-gradient(90deg,rgba(77,124,254,0.12),rgba(77,124,254,0.02))"></div>' +
+          '<div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px">' +
+          '<div style="display:flex;align-items:center;gap:10px;min-width:0">' +
+          '<span style="color:var(--txt);font-weight:600;font-size:13px;white-space:nowrap;' +
+          'overflow:hidden;text-overflow:ellipsis">' + esc(String(it.name == null ? '—' : it.name)) + '</span>' +
+          '<span style="font-size:10px;letter-spacing:.5px;text-transform:uppercase;' +
+          'border:1px solid ' + chipColor + ';color:' + chipColor + ';border-radius:6px;' +
+          'padding:1px 7px;white-space:nowrap">' + esc(st) + '</span>' +
+          '</div>' +
+          '<span style="color:var(--txt);font-weight:700;font-size:13px;white-space:nowrap">' +
+          (typeof fmtK === 'function' ? fmtK(cnt) : cnt) + '</span>' +
+          '</div></div>';
+      });
+      body += '</div>';
+    }
+    openDrawer(esc(label) + ' — contributors', body);
+  };
+
+  if (o && o.provContributors && o.provContributors[key]) {
+    render(o.provContributors[key]);
+  } else {
+    api('/api/overview').then(function (ov) {
+      try { if (typeof window !== 'undefined') window.__pvLastOverview = ov; } catch (e) {}
+      render(ov && ov.provContributors ? ov.provContributors[key] : []);
+    }).catch(function () { render([]); });
+  }
+}
+function vUltraViz() {
+  // --- Strategy detection over SESS ---------------------------------------
+  var SAFE = (typeof SESS !== 'undefined' && Array.isArray(SESS)) ? SESS : [];
+
+  var STRATS_uc = [
+    { key: 'fan-out',          color: 'var(--accent)', means: 'parallel subagents spread the work',  test: function (s) { return Math.max(s.subagentFiles || 0, s.subagentSpawns || 0) >= 2; } },
+    { key: 'tournament',       color: 'var(--cyan)',   means: 'many candidates compete, best wins',   test: function (s) { return Math.max(s.subagentFiles || 0, s.subagentSpawns || 0) >= 3; } },
+    { key: 'loop-until-done',  color: 'var(--green)',  means: 'iterate on a todo list until clear',    test: function (s) { return (s.toolCalls || 0) >= 25 || byToolMatch_uc(s, /Todo|TaskCreate/); } },
+    { key: 'adversarial',      color: 'var(--red)',    means: 'test / review / verify the output',     test: function (s) { return byToolMatch_uc(s, /test|review|verify|security|lint/i); } },
+    { key: 'classify-and-act', color: 'var(--viol)',   means: 'route by classification, then execute', test: function (s) { return byToolMatch_uc(s, /TaskCreate|Todo/); } }
+  ];
+
+  function byToolMatch_uc(s, re) {
+    var bt = s && s.byTool;
+    if (!bt) return false;
+    for (var k in bt) { if (Object.prototype.hasOwnProperty.call(bt, k) && re.test(k)) return true; }
+    return false;
+  }
+
+  // count + collect matching sessions per strategy
+  var data_uc = STRATS_uc.map(function (st) {
+    var hits = [];
+    for (var i = 0; i < SAFE.length; i++) { if (st.test(SAFE[i])) hits.push(SAFE[i]); }
+    return { key: st.key, color: st.color, means: st.means, count: hits.length, sessions: hits };
+  });
+
+  var totalMatches_uc = data_uc.reduce(function (a, d) { return a + d.count; }, 0);
+  var maxCount_uc = data_uc.reduce(function (a, d) { return Math.max(a, d.count); }, 0);
+  var detectedStrats_uc = data_uc.filter(function (d) { return d.count > 0; }).length;
+  var totalCalls_uc = SAFE.reduce(function (a, s) { return a + (s.toolCalls || 0); }, 0);
+
+  // expose drawer handler globally so SVG onclick can reach it
+  window.__ucGearDrawer_uc = function (key) {
+    var d = null;
+    for (var i = 0; i < data_uc.length; i++) { if (data_uc[i].key === key) { d = data_uc[i]; break; } }
+    if (!d) return;
+    var rows = d.sessions.map(function (s) {
+      var fan = Math.max(s.subagentFiles || 0, s.subagentSpawns || 0);
+      return '<tr style="border-bottom:1px solid var(--line)">' +
+        '<td style="padding:8px 10px;color:var(--txt)">' + esc(String(s.project || 'unknown')) + '</td>' +
+        '<td style="padding:8px 10px;color:var(--mut)">' + esc(String(s.source || '-')) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--cyan)">' + fmtK(s.toolCalls || 0) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--viol)">' + fmtK(fan) + '</td>' +
+        '<td style="padding:8px 10px;text-align:right;color:var(--mut)">' + fmtK(s.tokensTotal || 0) + '</td>' +
+        '</tr>';
+    }).join('');
+    var body = '<div style="color:var(--mut);margin-bottom:12px">' + esc(d.means) +
+      ' &mdash; <b style="color:var(--txt)">' + d.count + '</b> session' + (d.count === 1 ? '' : 's') + '</div>' +
+      (d.count ?
+        '<table style="width:100%;border-collapse:collapse;font:13px/1.4 ui-monospace,Menlo,monospace">' +
+        '<thead><tr style="color:var(--mut);text-align:left">' +
+        '<th style="padding:6px 10px">project</th><th style="padding:6px 10px">source</th>' +
+        '<th style="padding:6px 10px;text-align:right">calls</th>' +
+        '<th style="padding:6px 10px;text-align:right">fan</th>' +
+        '<th style="padding:6px 10px;text-align:right">tokens</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>'
+        : '<div style="color:var(--mut)">No sessions used this strategy.</div>');
+    openDrawer(esc(d.key), body);
+  };
+
+  // --- Empty state ---------------------------------------------------------
+  if (SAFE.length === 0) {
+    var emptyBody = '<div style="display:flex;align-items:center;justify-content:center;height:360px;' +
+      'border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--mut);' +
+      'font:15px ui-monospace,Menlo,monospace;flex-direction:column;gap:10px">' +
+      '<div style="font-size:34px;opacity:.5">&#9881;</div>' +
+      '<div>The engine room is quiet &mdash; no sessions loaded.</div></div>';
+    document.getElementById('main').innerHTML =
+      shell('ULTRACODE', '<span style="color:var(--mut)">no strategies detected</span>') +
+      '<div style="padding:18px">' + emptyBody + '</div>';
+    return;
+  }
+
+  // --- Gear geometry -------------------------------------------------------
+  var W_uc = 1000, H_uc = 440;
+  var slots_uc = [
+    { cx: 160, cy: 200 },
+    { cx: 350, cy: 270 },
+    { cx: 540, cy: 190 },
+    { cx: 720, cy: 280 },
+    { cx: 880, cy: 200 }
+  ];
+
+  function gearRadius_uc(count) {
+    var t = maxCount_uc > 0 ? (count / maxCount_uc) : 0;
+    return 42 + Math.round(t * 56); // 42..98
+  }
+  function gearTeeth_uc(count) {
+    return Math.max(8, 8 + count * 2);
+  }
+  function spinDur_uc(count) {
+    if (count <= 0) return 0; // still
+    var t = maxCount_uc > 0 ? (count / maxCount_uc) : 0;
+    return (14 - t * 10).toFixed(2); // 14s slow .. 4s fast
+  }
+
+  function gearPath_uc(r, teeth) {
+    var inner = r * 0.74, outer = r;
+    var pts = [];
+    var steps = teeth * 2;
+    for (var i = 0; i < steps; i++) {
+      var ang = (i / steps) * Math.PI * 2;
+      var rad = (i % 2 === 0) ? outer : inner;
+      pts.push((Math.cos(ang) * rad).toFixed(2) + ',' + (Math.sin(ang) * rad).toFixed(2));
+    }
+    return 'M' + pts.join('L') + 'Z';
+  }
+
+  var gearsSvg_uc = data_uc.map(function (d, idx) {
+    var slot = slots_uc[idx];
+    var r = gearRadius_uc(d.count);
+    var teeth = gearTeeth_uc(d.count);
+    var dur = spinDur_uc(d.count);
+    var active = d.count > 0;
+    var from = (idx % 2 === 0) ? '0' : '360';
+    var to = (idx % 2 === 0) ? '360' : '0';
+    var op = active ? 1 : 0.28;
+    var hub = Math.max(8, r * 0.18);
+
+    var anim = (active && dur > 0) ?
+      '<animateTransform attributeName="transform" attributeType="XML" type="rotate" ' +
+      'from="' + from + '" to="' + to + '" ' +
+      'dur="' + dur + 's" repeatCount="indefinite"/>' : '';
+
+    var labelY = slot.cy + r + 22;
+
+    return '' +
+      '<g class="uc-gear" style="cursor:pointer" opacity="' + op + '" ' +
+      'onclick="window.__ucGearDrawer_uc(\'' + d.key + '\')">' +
+      '<title>' + d.key + ' — ' + d.count + ' sessions</title>' +
+      '<g transform="translate(' + slot.cx + ',' + slot.cy + ')">' +
+      '<g>' +
+      '<path d="' + gearPath_uc(r, teeth) + '" fill="' + d.color + '" fill-opacity="0.18" ' +
+      'stroke="' + d.color + '" stroke-width="2.5"/>' +
+      '<circle r="' + (r * 0.55).toFixed(1) + '" fill="var(--panel2)" stroke="' + d.color + '" stroke-width="1.5"/>' +
+      '<circle r="' + hub.toFixed(1) + '" fill="' + d.color + '"/>' +
+      anim +
+      '</g>' +
+      '</g>' +
+      '<text x="' + slot.cx + '" y="' + labelY + '" text-anchor="middle" ' +
+      'fill="' + (active ? 'var(--txt)' : 'var(--mut)') + '" ' +
+      'style="font:600 13px ui-monospace,Menlo,monospace">' + d.key + '</text>' +
+      '<text x="' + slot.cx + '" y="' + (labelY + 17) + '" text-anchor="middle" ' +
+      'fill="' + d.color + '" style="font:700 13px ui-monospace,Menlo,monospace">' + d.count + '</text>' +
+      '</g>';
+  }).join('');
+
+  // --- Levers / pistons (SMIL, keyed to overall activity) ------------------
+  var pistonDur_uc = totalCalls_uc > 0
+    ? Math.max(0.7, (3.2 - Math.min(2.4, totalCalls_uc / 400))).toFixed(2)
+    : 0;
+  function piston_uc(x, color) {
+    var travel = 46;
+    var topY = 40, botY = topY + travel;
+    var anim = pistonDur_uc > 0 ?
+      '<animate attributeName="y" values="' + topY + ';' + botY + ';' + topY + '" ' +
+      'dur="' + pistonDur_uc + 's" repeatCount="indefinite"/>' : '';
+    return '<g>' +
+      '<line x1="' + x + '" y1="20" x2="' + x + '" y2="' + (botY + 36) + '" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>' +
+      '<rect x="' + (x - 14) + '" width="28" height="34" rx="5" fill="' + color + '" fill-opacity="0.25" stroke="' + color + '" stroke-width="2" y="' + topY + '">' +
+      anim + '</rect>' +
+      '</g>';
+  }
+  var pistonsSvg_uc = piston_uc(250, 'var(--amber)') + piston_uc(540, 'var(--cyan)') + piston_uc(820, 'var(--accent)');
+
+  // --- Legend --------------------------------------------------------------
+  var legend_uc = '<div style="display:flex;flex-wrap:wrap;gap:10px 18px;padding:14px 18px;' +
+    'border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-top:14px">' +
+    data_uc.map(function (d) {
+      var dim = d.count > 0 ? '1' : '.45';
+      return '<div style="display:flex;align-items:center;gap:8px;cursor:pointer;opacity:' + dim + ';' +
+        'font:12px ui-monospace,Menlo,monospace;color:var(--mut)" ' +
+        'onclick="window.__ucGearDrawer_uc(\'' + d.key + '\')">' +
+        '<span style="width:13px;height:13px;border-radius:3px;background:' + d.color + ';' +
+        'box-shadow:0 0 8px ' + d.color + '"></span>' +
+        '<b style="color:var(--txt)">' + esc(d.key) + '</b>' +
+        '<span>&middot; ' + esc(d.means) + '</span>' +
+        '<span style="color:' + d.color + ';font-weight:700">(' + d.count + ')</span></div>';
+    }).join('') + '</div>';
+
+  // --- SVG frame -----------------------------------------------------------
+  var svg = '' +
+    '<style>' +
+    '.uc-gear:hover{filter:brightness(1.25)}' +
+    '@keyframes ucGlow{0%,100%{opacity:.35}50%{opacity:.85}}' +
+    '.uc-spark{animation:ucGlow 2.6s ease-in-out infinite}' +
+    '</style>' +
+    '<svg viewBox="0 0 ' + W_uc + ' ' + H_uc + '" width="100%" height="440" ' +
+    'style="display:block;border:1px solid var(--line);border-radius:14px;' +
+    'background:radial-gradient(120% 120% at 50% 0%, #131c30 0%, var(--panel2) 70%)">' +
+    '<rect x="40" y="' + (H_uc - 60) + '" width="' + (W_uc - 80) + '" height="8" rx="4" fill="var(--line)"/>' +
+    pistonsSvg_uc +
+    '<polyline points="160,200 350,270 540,190 720,280 880,200" fill="none" ' +
+    'stroke="var(--line)" stroke-width="3" stroke-dasharray="2 8" class="uc-spark"/>' +
+    gearsSvg_uc +
+    '</svg>';
+
+  var sub = '<span style="color:var(--mut)">' +
+    '<b style="color:var(--txt)">' + detectedStrats_uc + '</b>/5 strategies detected across ' +
+    '<b style="color:var(--txt)">' + SAFE.length + '</b> session' + (SAFE.length === 1 ? '' : 's') +
+    ' &middot; ' + fmtK(totalMatches_uc) + ' strategy-matches &middot; ' + fmtK(totalCalls_uc) + ' tool calls' +
+    '</span>';
+
+  var body = '<div style="padding:18px">' + svg + legend_uc +
+    '<div style="margin-top:10px;color:var(--mut);font:11px ui-monospace,Menlo,monospace">' +
+    'Click any gear to inspect its sessions. Bigger, faster gears = busier strategies; dim still gears = unused.</div>' +
+    '</div>';
+
+  document.getElementById('main').innerHTML = shell('ULTRACODE', sub) + body;
+}
+async function vCursorViz() {
+  // ---- helpers (suffixed _cu) ----
+  const hash_cu = (s) => {
+    s = String(s || '');
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0);
+  };
+  const rnd_cu = (seed) => {
+    // deterministic 0..1 from integer seed
+    let t = (seed + 0x6D2B79F5) >>> 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const clamp_cu = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const chips_cu = (arr, color) => {
+    if (!arr || !arr.length) return '<span style="color:var(--mut)">none</span>';
+    return arr.map((t) =>
+      '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 9px;border-radius:999px;' +
+      'background:rgba(255,255,255,.04);border:1px solid var(--line);color:' + (color || 'var(--txt)') +
+      ';font-size:12px">' + esc(t) + '</span>'
+    ).join('');
+  };
+
+  // ---- fetch ----
+  let c;
+  try {
+    c = await api('/api/cursor');
+  } catch (e) {
+    c = { exists: false, error: String(e && e.message ? e.message : e) };
+  }
+  c = c || {};
+  const convos = Array.isArray(c.conversations) ? c.conversations : [];
+  const composers = c.composers || convos.length;
+  const messages = c.messages || convos.reduce((a, x) => a + (x.messageCount || 0), 0);
+  const liveCount = c.live != null ? c.live : convos.filter((x) => x.live).length;
+  const models = Array.isArray(c.models) ? c.models : [];
+  const workspaces = Array.from(new Set(convos.map((x) => x.workspace || 'unknown')));
+
+  const sub =
+    '<span style="color:var(--cyan)">' + fmtK(composers) + '</span> conversations · ' +
+    '<span style="color:var(--viol)">' + fmtK(messages) + '</span> messages · ' +
+    '<span style="color:var(--green)">' + fmtK(liveCount) + '</span> live';
+
+  // ---- empty / unavailable state ----
+  if (c.exists === false || convos.length === 0) {
+    const reason = c.error
+      ? esc(c.error)
+      : (c.note ? esc(c.note) : 'No Cursor conversations were found on this machine yet.');
+    const body =
+      '<div style="padding:18px">' +
+      '<div style="position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;' +
+      'background:radial-gradient(120% 120% at 50% -20%,rgba(77,124,254,.16),rgba(0,0,0,0) 60%),var(--panel2);' +
+      'min-height:360px;display:flex;align-items:center;justify-content:center;text-align:center">' +
+      '<svg viewBox="0 0 600 360" width="100%" height="360" preserveAspectRatio="xMidYMid slice" ' +
+      'style="position:absolute;inset:0;opacity:.5">' +
+      (function () {
+        let s = '';
+        for (let i = 0; i < 60; i++) {
+          const x = (rnd_cu(i * 7 + 1) * 600).toFixed(1);
+          const y = (rnd_cu(i * 13 + 3) * 360).toFixed(1);
+          const r = (0.5 + rnd_cu(i * 17 + 5) * 1.6).toFixed(2);
+          const dur = (2.2 + rnd_cu(i * 19 + 9) * 3.5).toFixed(2);
+          s += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#cfe0ff">' +
+            '<animate attributeName="opacity" values="0.15;0.9;0.15" dur="' + dur + 's" ' +
+            'begin="' + (rnd_cu(i * 23 + 11) * 3).toFixed(2) + 's" repeatCount="indefinite"/></circle>';
+        }
+        return s;
+      })() +
+      '</svg>' +
+      '<div style="position:relative;z-index:2;padding:32px;max-width:440px">' +
+      '<div style="font-size:34px;margin-bottom:10px">✦</div>' +
+      '<div style="font-size:18px;font-weight:600;color:var(--txt);margin-bottom:8px">The sky is quiet</div>' +
+      '<div style="color:var(--mut);line-height:1.5;font-size:13px">' + reason + '</div>' +
+      '</div></div></div>';
+    document.getElementById('main').innerHTML = shell('Cursor', sub) + body;
+    return;
+  }
+
+  // ---- KPI strip ----
+  const kpi_cu = (label, val, color) =>
+    '<div style="flex:1;min-width:96px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;' +
+    'background:var(--panel2)">' +
+    '<div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)">' + label + '</div>' +
+    '<div style="font-size:20px;font-weight:700;margin-top:2px;color:' + (color || 'var(--txt)') + '">' +
+    val + '</div></div>';
+  const kpiStrip =
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 18px 4px">' +
+    kpi_cu('Workspaces', fmtK(workspaces.length), 'var(--accent)') +
+    kpi_cu('Conversations', fmtK(composers), 'var(--cyan)') +
+    kpi_cu('Messages', fmtK(messages), 'var(--viol)') +
+    kpi_cu('Live', fmtK(liveCount), 'var(--green)') +
+    kpi_cu('Models', fmtK(models.length), 'var(--amber)') +
+    '</div>';
+
+  // ---- constellation layout (deterministic cluster centroids by workspace) ----
+  const W = 1000, H = 460;
+  const wsCount = workspaces.length;
+  const centroids = {};
+  workspaces.forEach((ws, i) => {
+    // arrange centroids on a loose ring / grid blend, deterministic
+    const ang = (i / Math.max(1, wsCount)) * Math.PI * 2 + (hash_cu(ws) % 100) / 100;
+    const ringR = wsCount <= 1 ? 0 : (140 + (hash_cu(ws + 'r') % 90));
+    const jx = (rnd_cu(hash_cu(ws + 'x')) - 0.5) * 90;
+    const jy = (rnd_cu(hash_cu(ws + 'y')) - 0.5) * 70;
+    centroids[ws] = {
+      x: clamp_cu(W / 2 + Math.cos(ang) * ringR + jx, 70, W - 70),
+      y: clamp_cu(H / 2 + Math.sin(ang) * ringR * 0.72 + jy, 60, H - 60),
+    };
+  });
+
+  // max messageCount for radius scaling
+  const maxMsg = Math.max(1, ...convos.map((x) => x.messageCount || 0));
+
+  // place each star around its workspace centroid
+  const wsIndex = {};
+  const stars = convos.map((cv, idx) => {
+    const ws = cv.workspace || 'unknown';
+    wsIndex[ws] = (wsIndex[ws] || 0);
+    const k = wsIndex[ws]++;
+    const cen = centroids[ws];
+    const seed = hash_cu(String(cv.id) + idx);
+    const a = (k * 2.39996323 + (seed % 360) * Math.PI / 180); // golden-angle spread
+    const spread = 22 + Math.sqrt(k + 1) * 26 + (seed % 18);
+    const x = clamp_cu(cen.x + Math.cos(a) * spread, 28, W - 28);
+    const y = clamp_cu(cen.y + Math.sin(a) * spread * 0.82, 28, H - 28);
+    const r = 4 + Math.sqrt((cv.messageCount || 0) / maxMsg) * 16;
+    return { cv, x, y, r, ws, idx, seed };
+  });
+
+  // build a registry so click handlers can resolve data without inline JSON
+  const reg = (window.__cuStars_cu = {});
+  stars.forEach((s) => { reg[s.idx] = s.cv; });
+  window.__cuOpen_cu = function (i) {
+    const cv = (window.__cuStars_cu || {})[i];
+    if (!cv) return;
+    const body =
+      '<div style="display:grid;gap:14px">' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+      '<span style="padding:4px 10px;border-radius:999px;background:rgba(47,208,224,.12);' +
+      'border:1px solid var(--line);color:var(--cyan);font-size:12px">' +
+      (cv.agentic ? 'Agentic' : 'Chat') + '</span>' +
+      (cv.live ? '<span style="padding:4px 10px;border-radius:999px;background:rgba(46,212,122,.12);' +
+        'border:1px solid var(--line);color:var(--green);font-size:12px">Live</span>' : '') +
+      '<span style="padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.04);' +
+      'border:1px solid var(--line);color:var(--mut);font-size:12px">' + ago(cv.lastTs) + '</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">' +
+      '<span style="color:var(--mut)">Workspace</span><span style="color:var(--txt)">' +
+      esc(cv.workspace || 'unknown') + '</span>' +
+      '<span style="color:var(--mut)">Model</span><span style="color:var(--txt)">' +
+      esc(cv.model || 'unknown') + '</span>' +
+      '<span style="color:var(--mut)">Messages</span><span style="color:var(--txt)">' +
+      fmtK(cv.messageCount || 0) + '</span>' +
+      '</div>' +
+      '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);' +
+      'margin-bottom:6px">Tools</div>' + chips_cu(cv.tools, 'var(--cyan)') + '</div>' +
+      '<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);' +
+      'margin-bottom:6px">Files</div>' +
+      ((cv.files && cv.files.length)
+        ? '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;' +
+          'background:var(--panel2)">' +
+          cv.files.map((f) =>
+            '<div style="padding:6px 10px;border-bottom:1px solid var(--line);font-size:12px;' +
+            'color:var(--txt);font-family:ui-monospace,Menlo,monospace;word-break:break-all">' +
+            esc(f) + '</div>').join('') + '</div>'
+        : '<span style="color:var(--mut)">none</span>') +
+      '</div></div>';
+    openDrawer(esc(cv.title || 'Conversation'), body);
+  };
+
+  // background twinkle field
+  let bg = '';
+  for (let i = 0; i < 90; i++) {
+    const x = (rnd_cu(i * 7 + 1) * W).toFixed(1);
+    const y = (rnd_cu(i * 13 + 3) * H).toFixed(1);
+    const r = (0.4 + rnd_cu(i * 17 + 5) * 1.3).toFixed(2);
+    const dur = (2.5 + rnd_cu(i * 19 + 9) * 4).toFixed(2);
+    bg += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#bcd0ff" opacity="0.25">' +
+      '<animate attributeName="opacity" values="0.08;0.6;0.08" dur="' + dur + 's" begin="' +
+      (rnd_cu(i * 23 + 11) * 4).toFixed(2) + 's" repeatCount="indefinite"/></circle>';
+  }
+
+  // constellation lines: connect same-workspace stars (chain ordered by angle)
+  let lines = '';
+  workspaces.forEach((ws) => {
+    const grp = stars.filter((s) => s.ws === ws);
+    if (grp.length < 2) return;
+    const cen = centroids[ws];
+    grp.sort((a, b) =>
+      Math.atan2(a.y - cen.y, a.x - cen.x) - Math.atan2(b.y - cen.y, b.x - cen.x));
+    for (let i = 1; i < grp.length; i++) {
+      const p = grp[i - 1], q = grp[i];
+      lines += '<line x1="' + p.x.toFixed(1) + '" y1="' + p.y.toFixed(1) + '" x2="' +
+        q.x.toFixed(1) + '" y2="' + q.y.toFixed(1) +
+        '" stroke="url(#cuLine)" stroke-width="1" opacity="0.28"/>';
+    }
+  });
+
+  // stars markup
+  let starsSvg = '';
+  stars.forEach((s) => {
+    const cv = s.cv;
+    const agentic = !!cv.agentic;
+    const core = agentic ? 'var(--cyan)' : 'var(--viol)';
+    const glow = agentic ? '#2fd0e0' : '#9a7dff';
+    const tw = (2.6 + rnd_cu(s.seed) * 3.4).toFixed(2);
+    const beg = (rnd_cu(s.seed + 1) * 3).toFixed(2);
+    const title = esc(cv.title || 'Conversation') + ' · ' + fmtK(cv.messageCount || 0) +
+      ' msgs · ' + ((cv.tools && cv.tools.length) || 0) + ' tools';
+    starsSvg +=
+      '<g class="cu-star" style="cursor:pointer" onclick="window.__cuOpen_cu(' + s.idx + ')">' +
+      '<title>' + title + '</title>' +
+      // halo
+      '<circle cx="' + s.x.toFixed(1) + '" cy="' + s.y.toFixed(1) + '" r="' + (s.r * 1.9).toFixed(1) +
+      '" fill="' + glow + '" opacity="0.10"/>' +
+      // pulse ring for live
+      (cv.live
+        ? '<circle cx="' + s.x.toFixed(1) + '" cy="' + s.y.toFixed(1) + '" r="' + s.r.toFixed(1) +
+          '" fill="none" stroke="var(--green)" stroke-width="1.4" opacity="0.8">' +
+          '<animate attributeName="r" values="' + s.r.toFixed(1) + ';' + (s.r * 2.6).toFixed(1) +
+          '" dur="2.2s" repeatCount="indefinite"/>' +
+          '<animate attributeName="opacity" values="0.85;0" dur="2.2s" repeatCount="indefinite"/></circle>'
+        : '') +
+      // core orb (twinkle)
+      '<circle cx="' + s.x.toFixed(1) + '" cy="' + s.y.toFixed(1) + '" r="' + s.r.toFixed(1) +
+      '" fill="' + (cv.live ? 'var(--green)' : core) + '" stroke="rgba(255,255,255,.55)" stroke-width="0.6">' +
+      '<animate attributeName="opacity" values="0.55;1;0.55" dur="' + tw + 's" begin="' + beg +
+      's" repeatCount="indefinite"/></circle>' +
+      // bright center
+      '<circle cx="' + s.x.toFixed(1) + '" cy="' + s.y.toFixed(1) + '" r="' +
+      Math.max(1, s.r * 0.32).toFixed(1) + '" fill="#ffffff" opacity="0.9"/>' +
+      '</g>';
+  });
+
+  const svg =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="460" ' +
+    'preserveAspectRatio="xMidYMid meet" style="display:block">' +
+    '<defs>' +
+    '<radialGradient id="cuSky" cx="50%" cy="22%" r="90%">' +
+    '<stop offset="0%" stop-color="#16203a"/>' +
+    '<stop offset="55%" stop-color="#0d1422"/>' +
+    '<stop offset="100%" stop-color="#080d18"/>' +
+    '</radialGradient>' +
+    '<linearGradient id="cuLine" x1="0" y1="0" x2="1" y2="0">' +
+    '<stop offset="0%" stop-color="#4d7cfe" stop-opacity="0.0"/>' +
+    '<stop offset="50%" stop-color="#9a7dff" stop-opacity="0.9"/>' +
+    '<stop offset="100%" stop-color="#2fd0e0" stop-opacity="0.0"/>' +
+    '</linearGradient>' +
+    '</defs>' +
+    '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#cuSky)"/>' +
+    '<style>.cu-star:hover circle:nth-child(4){stroke:#fff;stroke-width:1.4}</style>' +
+    bg + lines + starsSvg +
+    '</svg>';
+
+  const legend =
+    '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:8px 18px 0;font-size:12px;color:var(--mut)">' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--cyan);margin-right:6px;vertical-align:middle"></span>Agentic</span>' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--viol);margin-right:6px;vertical-align:middle"></span>Chat</span>' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:middle"></span>Live (pulsing)</span>' +
+    '<span style="margin-left:auto">Orb size ∝ messages · lines link same workspace</span>' +
+    '</div>';
+
+  const body =
+    kpiStrip +
+    '<div style="padding:8px 18px 18px">' +
+    '<div style="position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;' +
+    'box-shadow:0 0 0 1px rgba(255,255,255,.02),0 20px 60px rgba(0,0,0,.35);background:var(--panel2)">' +
+    svg +
+    '</div>' +
+    legend +
+    '</div>';
+
+  document.getElementById('main').innerHTML = shell('Cursor', sub) + body;
+}
+async function vTopoViz() {
+  // ---- fetch ----
+  let t;
+  try {
+    t = await api('/api/topology');
+  } catch (e) {
+    t = null;
+  }
+  t = t || {};
+  const skills = Array.isArray(t.skills) ? t.skills : [];
+  const agents = Array.isArray(t.agents) ? t.agents : [];
+  const commands = Array.isArray(t.commands) ? t.commands : [];
+  const mcp = Array.isArray(t.mcp) ? t.mcp : [];
+  const projects = Array.isArray(t.projects) ? t.projects : [];
+  const platforms = Array.isArray(t.platforms) ? t.platforms : [];
+
+  function clr_tp(sub) {
+    if (sub === 'local') return 'var(--green)';
+    if (sub === 'external') return 'var(--amber)';
+    return 'var(--mut)';
+  }
+  function pt_tp(cx, cy, r, ang) {
+    return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+  }
+  function curve_tp(x1, y1, x2, y2) {
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const nx = -dy;
+    const ny = dx;
+    const len = Math.sqrt(nx * nx + ny * ny) || 1;
+    const bow = 14;
+    const cxp = mx + (nx / len) * bow;
+    const cyp = my + (ny / len) * bow;
+    return 'M' + x1.toFixed(1) + ',' + y1.toFixed(1) +
+      ' Q' + cxp.toFixed(1) + ',' + cyp.toFixed(1) +
+      ' ' + x2.toFixed(1) + ',' + y2.toFixed(1);
+  }
+  function chip_tp(label, color) {
+    return '<span style="display:inline-block;padding:1px 8px;border-radius:10px;' +
+      'font-size:11px;background:rgba(255,255,255,0.05);border:1px solid ' + color +
+      ';color:' + color + ';margin-left:6px">' + esc(label) + '</span>';
+  }
+
+  const cats = [
+    { key: 'skills', name: 'Skills', items: skills.map(function (s) { return { name: s }; }), color: 'var(--accent)' },
+    { key: 'agents', name: 'Agents', items: agents.map(function (s) { return { name: s }; }), color: 'var(--cyan)' },
+    { key: 'commands', name: 'Commands', items: commands.map(function (s) { return { name: s }; }), color: 'var(--viol)' },
+    { key: 'mcp', name: 'MCP', items: mcp.map(function (m) { return { name: m && m.name ? m.name : String(m), subtype: m && m.subtype ? m.subtype : 'unknown', category: m && m.category ? m.category : '' }; }), color: 'var(--green)' },
+    { key: 'projects', name: 'Projects', items: projects.map(function (s) { return { name: s }; }), color: 'var(--amber)' },
+    { key: 'platforms', name: 'Platforms', items: platforms.map(function (s) { return { name: s }; }), color: 'var(--red)' }
+  ];
+
+  const totalItems = cats.reduce(function (a, c) { return a + c.items.length; }, 0);
+
+  const subtitle = '<sub>' +
+    fmtK(skills.length) + ' skills &middot; ' +
+    fmtK(agents.length) + ' agents &middot; ' +
+    fmtK(mcp.length) + ' MCP &middot; ' +
+    fmtK(projects.length) + ' projects' +
+    (t.source ? ' &middot; <span style="color:var(--mut)">' + esc(String(t.source)) + '</span>' : '') +
+    '</sub>';
+
+  if (totalItems === 0) {
+    document.getElementById('main').innerHTML = shell('Topology', subtitle) +
+      '<div style="display:flex;align-items:center;justify-content:center;height:460px;flex-direction:column;color:var(--mut);text-align:center">' +
+      '<div style="font-size:54px;margin-bottom:14px;filter:drop-shadow(0 0 18px var(--accent))">&#9678;</div>' +
+      '<div style="font-size:18px;color:var(--txt);margin-bottom:8px">No capabilities discovered yet</div>' +
+      '<div style="max-width:380px;line-height:1.5">Run some sessions or add <code style="color:var(--cyan)">~/.claude</code> skills, agents and MCP servers to bring the capability graph to life.</div>' +
+      '</div>';
+    return;
+  }
+
+  const W = 1000;
+  const H = 560;
+  const cx = W / 2;
+  const cy = H / 2;
+  const activeCats = cats.filter(function (c) { return c.items.length > 0; });
+  const hubRadius = 215;
+  const startAng = -Math.PI / 2;
+
+  let defs = '';
+  let coreLayer = '';
+  let linkLayer = '';
+  let hubLayer = '';
+  let orbLayer = '';
+
+  defs +=
+    '<radialGradient id="coreGrad_tp" cx="50%" cy="50%" r="50%">' +
+    '<stop offset="0%" stop-color="#cfe0ff" stop-opacity="0.95"/>' +
+    '<stop offset="35%" stop-color="var(--accent)" stop-opacity="0.9"/>' +
+    '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>' +
+    '</radialGradient>' +
+    '<filter id="glow_tp" x="-60%" y="-60%" width="220%" height="220%">' +
+    '<feGaussianBlur stdDeviation="3.2" result="b"/>' +
+    '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+    '</filter>' +
+    '<filter id="softglow_tp" x="-80%" y="-80%" width="260%" height="260%">' +
+    '<feGaussianBlur stdDeviation="6" result="b"/>' +
+    '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+    '</filter>';
+
+  let stars = '';
+  let seed = 1337;
+  function rnd_tp() {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
+  for (let i = 0; i < 70; i++) {
+    const sx = (rnd_tp() * W).toFixed(1);
+    const sy = (rnd_tp() * H).toFixed(1);
+    const sr = (0.4 + rnd_tp() * 1.1).toFixed(2);
+    const dur = (3 + rnd_tp() * 4).toFixed(1);
+    const beg = (-rnd_tp() * 5).toFixed(1);
+    stars += '<circle cx="' + sx + '" cy="' + sy + '" r="' + sr + '" fill="#9fb4d8" opacity="0.25">' +
+      '<animate attributeName="opacity" values="0.08;0.5;0.08" dur="' + dur + 's" begin="' + beg + 's" repeatCount="indefinite"/>' +
+      '</circle>';
+  }
+
+  coreLayer +=
+    '<circle cx="' + cx + '" cy="' + cy + '" r="86" fill="url(#coreGrad_tp)" opacity="0.55">' +
+    '<animate attributeName="r" values="80;92;80" dur="6s" repeatCount="indefinite"/>' +
+    '<animate attributeName="opacity" values="0.4;0.65;0.4" dur="6s" repeatCount="indefinite"/>' +
+    '</circle>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="34" fill="var(--panel2)" stroke="var(--accent)" stroke-width="1.5" filter="url(#glow_tp)"/>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="34" fill="none" stroke="var(--cyan)" stroke-width="1" opacity="0.5" stroke-dasharray="4 6">' +
+    '<animateTransform attributeName="transform" type="rotate" from="0 ' + cx + ' ' + cy + '" to="360 ' + cx + ' ' + cy + '" dur="40s" repeatCount="indefinite"/>' +
+    '</circle>' +
+    '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" fill="var(--txt)" font-size="13" font-weight="600" font-family="system-ui,sans-serif">AgentLens</text>' +
+    '<text x="' + cx + '" y="' + (cy + 13) + '" text-anchor="middle" fill="var(--mut)" font-size="9.5" font-family="system-ui,sans-serif">core</text>';
+
+  activeCats.forEach(function (cat, idx) {
+    const ang = startAng + (idx / activeCats.length) * Math.PI * 2;
+    const hp = pt_tp(cx, cy, hubRadius, ang);
+    const hx = hp[0];
+    const hy = hp[1];
+    const col = cat.color;
+    const rotDur = (55 + idx * 7);
+    const dir = idx % 2 === 0 ? 1 : -1;
+
+    linkLayer +=
+      '<path d="' + curve_tp(hx, hy, cx, cy) + '" fill="none" stroke="' + col + '" stroke-width="1.4" opacity="0.35">' +
+      '<animate attributeName="opacity" values="0.15;0.5;0.15" dur="' + (4 + idx) + 's" repeatCount="indefinite"/>' +
+      '</path>';
+
+    let groupInner = '';
+    const n = cat.items.length;
+    const ring = 58 + Math.min(40, n * 2.2);
+    const arcSpan = Math.PI * 1.7;
+    const orbStart = ang - arcSpan / 2;
+
+    cat.items.forEach(function (it, j) {
+      const oa = n === 1 ? ang : orbStart + (j / (n - 1)) * arcSpan;
+      const op = pt_tp(hx, hy, ring, oa);
+      const ox = op[0];
+      const oy = op[1];
+      const oc = cat.key === 'mcp' ? clr_tp(it.subtype) : col;
+      const orad = 5.2;
+      const bobDur = (3.4 + (j % 5) * 0.45).toFixed(2);
+      const bobBeg = (-(j % 7) * 0.4).toFixed(2);
+
+      groupInner +=
+        '<path d="' + curve_tp(hx, hy, ox, oy) + '" fill="none" stroke="' + oc + '" stroke-width="0.8" opacity="0.22"/>';
+
+      groupInner +=
+        '<g transform="translate(' + ox.toFixed(1) + ',' + oy.toFixed(1) + ')">' +
+        '<title>' + esc(it.name) + (cat.key === 'mcp' ? ' (' + esc(it.subtype) + ')' : '') + '</title>' +
+        '<circle r="' + (orad + 3) + '" fill="' + oc + '" opacity="0.12">' +
+        '<animate attributeName="opacity" values="0.05;0.22;0.05" dur="' + bobDur + 's" begin="' + bobBeg + 's" repeatCount="indefinite"/>' +
+        '</circle>' +
+        '<circle r="' + orad + '" fill="' + oc + '" stroke="var(--panel2)" stroke-width="0.8">' +
+        '<animate attributeName="r" values="' + orad + ';' + (orad + 1.3) + ';' + orad + '" dur="' + bobDur + 's" begin="' + bobBeg + 's" repeatCount="indefinite"/>' +
+        '</circle>' +
+        '</g>';
+    });
+
+    orbLayer +=
+      '<g>' +
+      '<animateTransform attributeName="transform" type="rotate" from="0 ' + hx.toFixed(1) + ' ' + hy.toFixed(1) + '" to="' + (dir * 360) + ' ' + hx.toFixed(1) + ' ' + hy.toFixed(1) + '" dur="' + rotDur + 's" repeatCount="indefinite"/>' +
+      groupInner +
+      '</g>';
+
+    hubLayer +=
+      '<g class="hub_tp" data-cat="' + esc(cat.key) + '" style="cursor:pointer">' +
+      '<circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="24" fill="var(--panel2)" stroke="' + col + '" stroke-width="1.6" filter="url(#glow_tp)"/>' +
+      '<circle cx="' + hx.toFixed(1) + '" cy="' + hy.toFixed(1) + '" r="24" fill="none" stroke="' + col + '" stroke-width="0.8" opacity="0.4">' +
+      '<animate attributeName="r" values="24;30;24" dur="' + (5 + idx) + 's" repeatCount="indefinite"/>' +
+      '<animate attributeName="opacity" values="0.4;0;0.4" dur="' + (5 + idx) + 's" repeatCount="indefinite"/>' +
+      '</circle>' +
+      '<text x="' + hx.toFixed(1) + '" y="' + (hy - 1).toFixed(1) + '" text-anchor="middle" fill="var(--txt)" font-size="11" font-weight="600" font-family="system-ui,sans-serif" pointer-events="none">' + esc(cat.name) + '</text>' +
+      '<text x="' + hx.toFixed(1) + '" y="' + (hy + 12).toFixed(1) + '" text-anchor="middle" fill="' + col + '" font-size="11" font-weight="700" font-family="system-ui,sans-serif" pointer-events="none">' + fmtK(n) + '</text>' +
+      '</g>';
+  });
+
+  const svg =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="500" preserveAspectRatio="xMidYMid meet" ' +
+    'style="display:block;background:radial-gradient(circle at 50% 45%, #0e1730 0%, var(--panel2) 70%);border-radius:14px;border:1px solid var(--line)">' +
+    '<defs>' + defs + '</defs>' +
+    '<g>' + stars + '</g>' +
+    '<g opacity="0.9">' + linkLayer + '</g>' +
+    coreLayer +
+    '<g>' + orbLayer + '</g>' +
+    '<g>' + hubLayer + '</g>' +
+    '</svg>';
+
+  const legend =
+    '<div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:12px;color:var(--mut);font-size:12px">' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:5px"></span>MCP local</span>' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--amber);margin-right:5px"></span>MCP external</span>' +
+    '<span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--mut);margin-right:5px"></span>MCP unknown</span>' +
+    '<span style="color:var(--accent)">Click a hub to inspect its items</span>' +
+    '</div>';
+
+  document.getElementById('main').innerHTML = shell('Topology', subtitle) +
+    '<div style="padding:6px 4px 0">' + svg + legend + '</div>';
+
+  const main = document.getElementById('main');
+  const hubs = main.querySelectorAll('.hub_tp');
+  hubs.forEach(function (g) {
+    g.addEventListener('click', function () {
+      const key = g.getAttribute('data-cat');
+      const cat = cats.filter(function (c) { return c.key === key; })[0];
+      if (!cat) return;
+      let body =
+        '<div style="color:var(--mut);font-size:13px;margin-bottom:12px">' +
+        fmtK(cat.items.length) + ' item' + (cat.items.length === 1 ? '' : 's') + '</div>';
+      if (cat.items.length === 0) {
+        body += '<div style="color:var(--mut)">Nothing here yet.</div>';
+      } else {
+        body += '<div style="display:flex;flex-direction:column;gap:7px">';
+        cat.items.forEach(function (it) {
+          let row =
+            '<div style="display:flex;align-items:center;justify-content:space-between;' +
+            'padding:9px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:9px">' +
+            '<span style="color:var(--txt);font-size:13px">' + esc(it.name) + '</span>';
+          if (key === 'mcp') {
+            row += '<span>' + chip_tp(it.subtype || 'unknown', clr_tp(it.subtype)) +
+              (it.category ? chip_tp(it.category, 'var(--mut)') : '') + '</span>';
+          }
+          row += '</div>';
+          body += row;
+        });
+        body += '</div>';
+      }
+      openDrawer(esc(cat.name), body);
+    });
+  });
+}
+
 function vFeed(){const m=document.getElementById('main');m.innerHTML=shell('AI Feed','Latest in AI — populated by your scheduled research loops.')+
   `<div class="card feed">${FEED.length?FEED.map(i=>`<div class="item"><div class="row"><span class="chip mcp">${esc(i.provider)}</span><span class="chip ${i.impact==='high'?'llm':i.impact==='medium'?'web':'loc'}">${esc(i.impact)}</span> <b>${esc(i.title)}</b><span class="dim" style="margin-left:auto">${esc(i.date||'')}</span></div><div class="muted" style="margin-top:4px">${esc(i.summary||'')} ${i.url?`· <a href="${esc(i.url)}" target="_blank">source ↗</a>`:''}</div></div>`).join(''):'<div class="empty">No feed items yet — the daily loop will populate this.</div>'}</div>`;}
 
